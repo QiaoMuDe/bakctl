@@ -2,6 +2,7 @@ package utils
 
 // initDbScript 数据库初始化脚本
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -81,7 +82,6 @@ func InitSQLite(dbFilename string, dataDirPath string) (*sqlx.DB, error) {
 	if !dbExists {
 		fmt.Printf("数据库文件不存在，正在创建并执行初始化脚本：%s\n", dbFullPath)
 		if _, err := sqlDB.Exec(initDbScript); err != nil {
-			sqlDB.Close() // 初始化失败时关闭连接
 			return nil, fmt.Errorf("执行数据库初始化脚本失败：%w", err)
 		}
 		fmt.Printf("数据库文件创建并初始化成功！完整路径：%s\n", dbFullPath)
@@ -132,3 +132,49 @@ CREATE INDEX IF NOT EXISTS idx_backup_records_created_at ON backup_records(creat
 CREATE INDEX IF NOT EXISTS idx_backup_records_task_id ON backup_records (task_id); 
 CREATE INDEX IF NOT EXISTS idx_backup_records_task_name ON backup_records (task_name);
 `
+
+// GetTaskIDByName 根据任务名称从数据库中获取任务ID。
+// 如果找到任务，返回任务ID和nil错误；如果未找到，返回0和sql.ErrNoRows错误。
+//
+// 参数：
+//   - db：数据库连接对象
+//   - taskName：任务名称
+//
+// 返回值：
+//   - int64：任务ID
+//   - error：如果获取过程中发生错误，则返回非 nil 错误信息
+func GetTaskIDByName(db *sqlx.DB, taskName string) (int64, error) {
+	var taskID int64
+	query := `SELECT ID FROM backup_tasks WHERE name = ?`
+	err := db.Get(&taskID, query, taskName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("未找到名称为 '%s' 的任务", taskName)
+		}
+		return 0, fmt.Errorf("根据任务名称 '%s' 获取ID失败: %w", taskName, err)
+	}
+	return taskID, nil
+}
+
+// GetTaskNameByID 根据任务ID从数据库中获取任务名称。
+// 如果找到任务，返回任务名称和nil错误；如果未找到，返回空字符串和更具体的错误信息。
+//
+// 参数：
+//   - db：数据库连接对象
+//   - taskID：任务ID
+//
+// 返回值：
+//   - string：任务名称
+//   - error：如果获取过程中发生错误，则返回非 nil 错误信息
+func GetTaskNameByID(db *sqlx.DB, taskID int64) (string, error) {
+	var taskName string
+	query := `SELECT name FROM backup_tasks WHERE ID = ?`
+	err := db.Get(&taskName, query, taskID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("未找到ID为 %d 的任务", taskID)
+		}
+		return "", fmt.Errorf("根据任务ID %d 获取名称失败: %w", taskID, err)
+	}
+	return taskName, nil
+}

@@ -1,5 +1,12 @@
 package types
 
+import (
+	"fmt"
+
+	"gitee.com/MM-Q/bakctl/internal/utils"
+	"github.com/jmoiron/sqlx"
+)
+
 const (
 	// 数据库文件名
 	DBFilename = "bakctl.db3"
@@ -33,22 +40,91 @@ type AddTaskConfig struct {
 	MinFileSize      int64    `toml:"min_file_size" comment:"最小文件大小（可选，小于此尺寸的文件不备份；示例：1024 = 1KB）"`            // 最小文件大小
 }
 
+// SQL INSERT 语句，使用命名参数
+// 注意：created_at 和 updated_at 字段在表定义中通常有 DEFAULT CURRENT_TIMESTAMP，
+// 所以这里不需要显式插入它们，数据库会自动处理。
+const query = `
+	INSERT INTO backup_tasks (
+		name,
+		retain_count,
+		retain_days,
+		backup_dir,
+		storage_dir,
+		compress_strategy,
+		include_rules,
+		exclude_rules,
+		max_file_size,
+		min_file_size
+	) VALUES (
+		:name,
+		:retain_count,
+		:retain_days,
+		:backup_dir,
+		:storage_dir,
+		:compress_strategy,
+		:include_rules,
+		:exclude_rules,
+		:max_file_size,
+		:min_file_size
+	)`
+
+// InsertIntoDB 将 AddTaskConfig 结构体的数据插入到 backup_tasks 表中。
+// 它将 []string 类型的规则字段转换为 JSON 字符串进行存储。
+//
+// 参数：
+//   - db：数据库连接对象
+//
+// 返回值：
+//   - error：如果插入过程中发生错误，则返回非 nil 错误信息
+func (cfg *AddTaskConfig) InsertIntoDB(db *sqlx.DB) error {
+	includeRulesJSON, err := utils.MarshalRules(cfg.IncludeRules)
+	if err != nil {
+		return fmt.Errorf("编码包含规则失败: %w", err)
+	}
+	excludeRulesJSON, err := utils.MarshalRules(cfg.ExcludeRules)
+	if err != nil {
+		return fmt.Errorf("编码排除规则失败: %w", err)
+	}
+
+	// 将 AddTaskConfig 转换为 BackupTask，处理规则字段的 JSON 编码
+	backupTask := BackupTask{
+		Name:             cfg.Name,             // 任务名称
+		RetainCount:      cfg.RetainCount,      // 保留备份数量
+		RetainDays:       cfg.RetainDays,       // 保留天数
+		BackupDir:        cfg.BackupDir,        // 备份源目录
+		StorageDir:       cfg.StorageDir,       // 存储目录
+		CompressStrategy: cfg.CompressStrategy, // 压缩策略
+		IncludeRules:     includeRulesJSON,     // 包含规则
+		ExcludeRules:     excludeRulesJSON,     // 排除规则
+		MaxFileSize:      cfg.MaxFileSize,      // 最大文件大小
+		MinFileSize:      cfg.MinFileSize,      // 最小文件大小
+	}
+
+	// 执行插入操作
+	_, err = db.NamedExec(query, backupTask)
+	if err != nil {
+		return fmt.Errorf("插入备份任务失败: %w", err)
+	}
+
+	return nil
+}
+
 // BackupTask 表示数据库中的备份任务记录
 // 与AddTaskConfig的区别在于：
 // 1. 增加了ID字段（数据库自增主键）
 // 2. IncludeRules和ExcludeRules为字符串类型（存储JSON数组格式）
 type BackupTask struct {
-	ID               int64  `json:"id"`                // 任务唯一标识（自增主键）
-	Name             string `json:"name"`              // 任务名称
-	RetainCount      int    `json:"retain_count"`      // 保留备份数量
-	RetainDays       int    `json:"retain_days"`       // 保留天数
-	BackupDir        string `json:"backup_dir"`        // 备份源目录
-	StorageDir       string `json:"storage_dir"`       // 存储目录
-	CompressStrategy string `json:"compress_strategy"` // 压缩策略
-	IncludeRules     string `json:"include_rules"`     // 包含规则（JSON格式字符串）
-	ExcludeRules     string `json:"exclude_rules"`     // 排除规则（JSON格式字符串）
-	MaxFileSize      int64  `json:"max_file_size"`     // 最大文件大小（字节）
-	MinFileSize      int64  `json:"min_file_size"`     // 最小文件大小（字节）
+	ID               int64  `db:"ID" json:"id"`                               // 任务唯一标识（自增主键）
+	Name             string `db:"name" json:"name"`                           // 任务名称
+	RetainCount      int    `db:"retain_count" json:"retain_count"`           // 保留备份数量
+	RetainDays       int    `db:"retain_days" json:"retain_days"`             // 保留天数
+	BackupDir        string `db:"backup_dir" json:"backup_dir"`               // 备份源目录
+	StorageDir       string `db:"storage_dir" json:"storage_dir"`             // 存储目录
+	CompressStrategy string `db:"compress_strategy" json:"compress_strategy"` // 压缩策略
+	IncludeRules     string `db:"include_rules" json:"include_rules"`         // 包含规则（JSON格式字符串）
+	ExcludeRules     string `db:"exclude_rules" json:"exclude_rules"`         // 排除规则（JSON格式字符串）
+	MaxFileSize      int64  `db:"max_file_size" json:"max_file_size"`         // 最大文件大小（字节）
+	MinFileSize      int64  `db:"min_file_size" json:"min_file_size"`         // 最小文件大小（字节）
 }
 
 // BackupRecord 对应 backup_records 表的结构体（适配 sqlx + SQLite）
@@ -74,4 +150,46 @@ type BackupRecord struct {
 
 	// 4. 时间字段（适配SQLite CURRENT_TIMESTAMP，用string接收避免类型转换问题）
 	CreatedAt string `db:"created_at" json:"created_at"` // 备份时间（默认SQLite自动生成，ISO8601格式字符串，如"2024-05-20T15:30:00Z"）
+}
+
+// SQL INSERT 语句，用于 backup_records 表
+const insertBackupRecordQuery = `
+	INSERT INTO backup_records (
+		task_id,
+		task_name,
+		version_id,
+		backup_filename,
+		backup_size,
+		status,
+		failure_message,
+		checksum,
+		storage_path
+	) VALUES (
+		:task_id,
+		:task_name,
+		:version_id,
+		:backup_filename,
+		:backup_size,
+		:status,
+		:failure_message,
+		:checksum,
+		:storage_path
+	)`
+
+// InsertIntoDB 将 BackupRecord 结构体的数据插入到 backup_records 表中。
+//
+// 参数：
+//   - db：数据库连接对象
+//
+// 返回值：
+//   - error：如果插入过程中发生错误，则返回非 nil 错误信息
+func (rec *BackupRecord) InsertIntoDB(db *sqlx.DB) error {
+	// 执行插入操作
+	// sqlx 的 NamedExec 方法会根据结构体的 db 标签自动映射字段
+	_, err := db.NamedExec(insertBackupRecordQuery, rec)
+	if err != nil {
+		return fmt.Errorf("插入备份记录失败: %w", err)
+	}
+
+	return nil
 }
