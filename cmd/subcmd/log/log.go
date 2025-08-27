@@ -6,6 +6,7 @@ import (
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/bakctl/internal/utils"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/jmoiron/sqlx"
@@ -26,6 +27,12 @@ func LogCmdMain(db *sqlx.DB) error {
 	data, err := DB.GetAllBackupRecords(db)
 	if err != nil {
 		return fmt.Errorf("查询备份记录失败: %w", err)
+	}
+
+	// 提前检查是否有备份记录
+	if len(data) == 0 {
+		fmt.Println("没有备份记录")
+		return nil
 	}
 
 	// 使用标准输出作为输出目标
@@ -57,7 +64,7 @@ func LogCmdMain(db *sqlx.DB) error {
 			record.TaskName,
 			record.VersionID,
 			record.BackupFilename,
-			record.BackupSize,
+			utils.FormatBytes(record.BackupSize),
 			record.StoragePath,
 			record.Status,
 			func() string {
