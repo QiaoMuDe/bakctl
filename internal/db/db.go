@@ -1,12 +1,13 @@
-package utils
+package db
 
-// initDbScript 数据库初始化脚本
 import (
 	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/bakctl/internal/utils"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -101,7 +102,7 @@ CREATE TABLE IF NOT EXISTS backup_tasks (
     retain_days INTEGER DEFAULT 7,       -- 保留天数(默认保留7天)
     backup_dir TEXT NOT NULL,            -- 备份源目录，非空
     storage_dir TEXT NOT NULL,           -- 存储目录，非空
-    compress_strategy TEXT,              -- 压缩策略 (none/fast/balanced/best)
+    compress BOOLEAN DEFAULT FALSE,      -- 是否压缩 (true/false)
     include_rules TEXT,                  -- 包含规则 (JSON数组字符串)
     exclude_rules TEXT,                  -- 排除规则 (JSON数组字符串)
     max_file_size INTEGER,               -- 最大文件大小 (字节)
@@ -117,7 +118,7 @@ CREATE TABLE IF NOT EXISTS backup_records (
     version_id TEXT NOT NULL UNIQUE,          -- 备份版本ID，唯一且非空
     backup_filename TEXT NOT NULL,            -- 备份文件名，非空
     backup_size INTEGER NOT NULL,             -- 备份文件大小 (字节)，非空
-    status TEXT NOT NULL,                     -- 备份状态(true/false)，非空
+    status BOOLEAN NOT NULL,                  -- 备份状态(true/false)，非空
     failure_message TEXT,                     -- 备份失败时的错误信息
     checksum TEXT,                            -- 备份文件校验码
     storage_path TEXT NOT NULL,               -- 备份文件存放路径，非空
@@ -177,4 +178,193 @@ func GetTaskNameByID(db *sqlx.DB, taskID int64) (string, error) {
 		return "", fmt.Errorf("根据任务ID %d 获取名称失败: %w", taskID, err)
 	}
 	return taskName, nil
+}
+
+// InsertAddTaskConfig 将 AddTaskConfig 结构体的数据插入到 backup_tasks 表中。
+// 它将 []string 类型的规则字段转换为 JSON 字符串进行存储。
+//
+// 参数：
+//   - db：数据库连接对象
+//   - cfg：要插入的 AddTaskConfig 结构体
+//
+// 返回值：
+//   - error：如果插入过程中发生错误, 则返回非 nil 错误信息
+func InsertAddTaskConfig(db *sqlx.DB, cfg *types.AddTaskConfig) error {
+	// 验证配置
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("配置验证失败: %w", err)
+	}
+
+	// 处理包含规则
+	includeRulesJSON, err := utils.MarshalRules(cfg.IncludeRules)
+	if err != nil {
+		return fmt.Errorf("编码包含规则失败: %w", err)
+	}
+
+	// 处理排除规则
+	excludeRulesJSON, err := utils.MarshalRules(cfg.ExcludeRules)
+	if err != nil {
+		return fmt.Errorf("编码排除规则失败: %w", err)
+	}
+
+	// 将 AddTaskConfig 转换为 BackupTask, 处理规则字段的 JSON 编码
+	backupTask := types.BackupTask{
+		Name:         cfg.Name,         // 任务名称
+		RetainCount:  cfg.RetainCount,  // 保留备份数量
+		RetainDays:   cfg.RetainDays,   // 保留天数
+		BackupDir:    cfg.BackupDir,    // 备份源目录
+		StorageDir:   cfg.StorageDir,   // 存储目录
+		Compress:     cfg.Compress,     // 是否压缩
+		IncludeRules: includeRulesJSON, // 包含规则
+		ExcludeRules: excludeRulesJSON, // 排除规则
+		MaxFileSize:  cfg.MaxFileSize,  // 最大文件大小
+		MinFileSize:  cfg.MinFileSize,  // 最小文件大小
+	}
+
+	// 执行插入操作
+	_, err = db.NamedExec(insertBackupTaskQuery, backupTask)
+	if err != nil {
+		return fmt.Errorf("插入备份任务失败: %w", err)
+	}
+
+	return nil
+}
+
+// SQL INSERT 语句，使用命名参数
+// 注意：created_at 和 updated_at 字段在表定义中通常有 DEFAULT CURRENT_TIMESTAMP，
+// 所以这里不需要显式插入它们，数据库会自动处理。
+const insertBackupTaskQuery = `
+	INSERT INTO backup_tasks (
+		name,
+		retain_count,
+		retain_days,
+		backup_dir,
+		storage_dir,
+		compress,
+		include_rules,
+		exclude_rules,
+		max_file_size,
+		min_file_size
+	) VALUES (
+		:name,
+		:retain_count,
+		:retain_days,
+		:backup_dir,
+		:storage_dir,
+		:compress,
+		:include_rules,
+		:exclude_rules,
+		:max_file_size,
+		:min_file_size
+	)`
+
+// SQL INSERT 语句，用于 backup_records 表
+const insertBackupRecordQuery = `
+	INSERT INTO backup_records (
+		task_id,
+		task_name,
+		version_id,
+		backup_filename,
+		backup_size,
+		status,
+		failure_message,
+		checksum,
+		storage_path
+	) VALUES (
+		:task_id,
+		:task_name,
+		:version_id,
+		:backup_filename,
+		:backup_size,
+		:status,
+		:failure_message,
+		:checksum,
+		:storage_path
+	)`
+
+// InsertBackupRecord 将 BackupRecord 结构体的数据插入到 backup_records 表中。
+//
+// 参数：
+//   - db：数据库连接对象
+//   - rec：要插入的 BackupRecord 结构体
+//
+// 返回值：
+//   - error：如果插入过程中发生错误，则返回非 nil 错误信息
+func InsertBackupRecord(db *sqlx.DB, rec *types.BackupRecord) error {
+	// 执行插入操作
+	// sqlx 的 NamedExec 方法会根据结构体的 db 标签自动映射字段
+	_, err := db.NamedExec(insertBackupRecordQuery, rec)
+	if err != nil {
+		return fmt.Errorf("插入备份记录失败: %w", err)
+	}
+
+	return nil
+}
+
+// queryGetAllBackupTasks SQL SELECT 语句，用于查询所有备份任务
+const queryGetAllBackupTasks = `
+	SELECT
+		ID,
+		name,
+		retain_count,
+		retain_days,
+		backup_dir,
+		storage_dir,
+		compress,
+		include_rules,
+		exclude_rules,
+		max_file_size,
+		min_file_size
+	FROM backup_tasks
+`
+
+// GetAllBackupTasks 从数据库中获取所有备份任务。
+//
+// 参数：
+//   - db：数据库连接对象
+//
+// 返回值：
+//   - []types.BackupTask：所有备份任务的切片
+//   - error：如果获取过程中发生错误，则返回非 nil 错误信息
+func GetAllBackupTasks(db *sqlx.DB) ([]types.BackupTask, error) {
+	var tasks []types.BackupTask
+	err := db.Select(&tasks, queryGetAllBackupTasks)
+	if err != nil {
+		return nil, fmt.Errorf("获取所有备份任务失败: %w", err)
+	}
+	return tasks, nil
+}
+
+// queryGetAllBackupRecords SQL SELECT 语句，用于查询所有备份记录
+const queryGetAllBackupRecords = `
+	SELECT
+		ID,
+		task_id,
+		task_name,
+		version_id,
+		backup_filename,
+		backup_size,
+		status,
+		failure_message,
+		checksum,
+		storage_path,
+		created_at
+	FROM backup_records
+`
+
+// GetAllBackupRecords 从数据库中获取所有备份记录。
+//
+// 参数：
+//   - db：数据库连接对象
+//
+// 返回值：
+//   - []types.BackupRecord：所有备份记录的切片
+//   - error：如果获取过程中发生错误，则返回非 nil 错误信息
+func GetAllBackupRecords(db *sqlx.DB) ([]types.BackupRecord, error) {
+	var records []types.BackupRecord
+	err := db.Select(&records, queryGetAllBackupRecords)
+	if err != nil {
+		return nil, fmt.Errorf("获取所有备份记录失败: %w", err)
+	}
+	return records, nil
 }

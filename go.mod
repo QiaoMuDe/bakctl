@@ -7,6 +7,7 @@ require (
 	gitee.com/MM-Q/verman v0.0.16
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/schollz/progressbar/v3 v3.18.0
 )
 
