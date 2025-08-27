@@ -6,6 +6,8 @@ import (
 	"runtime/debug"
 
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/add"
+	"gitee.com/MM-Q/bakctl/cmd/subcmd/list"
+	"gitee.com/MM-Q/bakctl/cmd/subcmd/log"
 	"gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/qflag"
@@ -27,8 +29,14 @@ func main() {
 	// 获取add命令
 	addCmd := add.InitAddCmd()
 
-	// 注册add命令
-	if err := qflag.AddSubCmd(addCmd); err != nil {
+	// 获取list命令
+	listCmd := list.InitListCmd()
+
+	// 获取log命令
+	logCmd := log.InitLogCmd()
+
+	// 注册子命令
+	if err := qflag.AddSubCmd(addCmd, listCmd, logCmd); err != nil {
 		fmt.Printf("err: %v\n", err)
 		os.Exit(1)
 	}
@@ -61,6 +69,21 @@ func main() {
 			fmt.Printf("err: %v\n", err)
 			os.Exit(1)
 		}
+		return
+
+	case listCmd.LongName(), listCmd.ShortName(): // list 命令
+		if err := list.ListCmdMain(db); err != nil {
+			fmt.Printf("err: %v\n", err)
+			os.Exit(1)
+		}
+		return
+
+	case logCmd.LongName(), logCmd.ShortName(): // log 命令
+		if err := log.LogCmdMain(db); err != nil {
+			fmt.Printf("err: %v\n", err)
+			os.Exit(1)
+		}
+		return
 
 	default:
 		fmt.Printf("unknown command: %s\n", cmdName)
