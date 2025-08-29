@@ -180,6 +180,28 @@ func GetTaskNameByID(db *sqlx.DB, taskID int64) (string, error) {
 	return taskName, nil
 }
 
+// GetTaskByID 根据任务ID从数据库中获取完整的任务信息。
+//
+// 参数：
+//   - db：数据库连接对象
+//   - taskID：任务ID
+//
+// 返回值：
+//   - *types.BackupTask：任务信息
+//   - error：如果获取过程中发生错误，则返回非 nil 错误信息
+func GetTaskByID(db *sqlx.DB, taskID int64) (*types.BackupTask, error) {
+	var task types.BackupTask
+	query := `SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, compress, include_rules, exclude_rules, max_file_size, min_file_size FROM backup_tasks WHERE ID = ?`
+	err := db.Get(&task, query, taskID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("未找到ID为 %d 的任务", taskID)
+		}
+		return nil, fmt.Errorf("根据任务ID %d 获取任务信息失败: %w", taskID, err)
+	}
+	return &task, nil
+}
+
 // InsertAddTaskConfig 将 AddTaskConfig 结构体的数据插入到 backup_tasks 表中。
 // 它将 []string 类型的规则字段转换为 JSON 字符串进行存储。
 //
