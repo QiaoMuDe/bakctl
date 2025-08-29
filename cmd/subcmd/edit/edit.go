@@ -9,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// EditCmdMain 编辑命令主函数
 func EditCmdMain(db *sqlx.DB) error {
 	// 获取要编辑的任务ID列表
 	taskIDs, err := getTaskIDs()
@@ -100,6 +101,18 @@ func hasAnyUpdateFlags() bool {
 		minSizeF.Get() != -1
 }
 
+// 固定的SQL更新语句
+const updateBackupTaskSQL = `UPDATE backup_tasks SET
+	retain_count = ?,
+	retain_days = ?,
+	compress = ?,
+	include_rules = ?,
+	exclude_rules = ?,
+	max_file_size = ?,
+	min_file_size = ?,
+	updated_at = CURRENT_TIMESTAMP
+WHERE ID = ?`
+
 // updateTask 更新单个任务
 //
 // 参数:
@@ -116,74 +129,32 @@ func updateTask(db *sqlx.DB, taskID int64) error {
 	}
 
 	// 准备更新的值，如果用户指定了新值且与当前值不同，则使用新值，否则使用当前值
-	// 保留数量
-	newRetainCount := currentTask.RetainCount
-	if retainCount := retainCountF.Get(); retainCount != -1 && retainCount != currentTask.RetainCount {
-		newRetainCount = retainCount
-	}
+	// 备份保留数量
+	newRetainCount := updateInt(currentTask.RetainCount, retainCountF.Get(), -1)
 
-	// 保留天数
-	newRetainDays := currentTask.RetainDays
-	if retainDays := retainDaysF.Get(); retainDays != -1 && retainDays != currentTask.RetainDays {
-		newRetainDays = retainDays
-	}
+	// 备份保留天数
+	newRetainDays := updateInt(currentTask.RetainDays, retainDaysF.Get(), -1)
 
-	// 是否压缩
-	newCompress := currentTask.Compress
-	if compressStr := compressF.Get(); compressStr != "" {
-		if compressStr == "true" {
-			newCompress = true
-		} else if compressStr == "false" {
-			newCompress = false
-		}
+	// 最大文件大小
+	newMaxFileSize := updateInt64(currentTask.MaxFileSize, maxSizeF.Get(), -1)
+
+	// 最小文件大小
+	newMinFileSize := updateInt64(currentTask.MinFileSize, minSizeF.Get(), -1)
+
+	// 备份是否压缩
+	newCompress, err := updateBooleanFromFlag(currentTask.Compress, compressF.Get, "压缩参数")
+	if err != nil {
+		return err // 如果解析失败，直接返回错误
 	}
 
 	// 包含规则
-	newIncludeRules := currentTask.IncludeRules
-	if includeRules := includeF.Get(); len(includeRules) > 0 {
-		if includeJSON, err := utils.MarshalRules(includeRules); err != nil {
-			fmt.Printf("警告: 包含规则编码失败: %v\n", err)
-		} else if includeJSON != currentTask.IncludeRules {
-			newIncludeRules = includeJSON
-		}
-	}
+	newIncludeRules := updateRuleString(currentTask.IncludeRules, includeF.Get(), "包含规则", clearIncludeF.Get())
 
 	// 排除规则
-	newExcludeRules := currentTask.ExcludeRules
-	if excludeRules := excludeF.Get(); len(excludeRules) > 0 {
-		if excludeJSON, err := utils.MarshalRules(excludeRules); err != nil {
-			fmt.Printf("警告: 排除规则编码失败: %v\n", err)
-		} else if excludeJSON != currentTask.ExcludeRules {
-			newExcludeRules = excludeJSON
-		}
-	}
-
-	// 最大文件大小
-	newMaxFileSize := currentTask.MaxFileSize
-	if maxSize := maxSizeF.Get(); maxSize != -1 && maxSize != currentTask.MaxFileSize {
-		newMaxFileSize = maxSize
-	}
-
-	// 最小文件大小
-	newMinFileSize := currentTask.MinFileSize
-	if minSize := minSizeF.Get(); minSize != -1 && minSize != currentTask.MinFileSize {
-		newMinFileSize = minSize
-	}
-
-	// 固定的SQL更新语句
-	sql := `UPDATE backup_tasks SET 
-		retain_count = ?, 
-		retain_days = ?, 
-		compress = ?, 
-		include_rules = ?, 
-		exclude_rules = ?, 
-		max_file_size = ?, 
-		min_file_size = ?, 
-		updated_at = CURRENT_TIMESTAMP 
-		WHERE ID = ?`
+	newExcludeRules := updateRuleString(currentTask.ExcludeRules, excludeF.Get(), "排除规则", clearExcludeF.Get())
 
 	// 执行更新
-	result, err := db.Exec(sql,
+	result, err := db.Exec(updateBackupTaskSQL,
 		newRetainCount,
 		newRetainDays,
 		newCompress,
@@ -208,4 +179,96 @@ func updateTask(db *sqlx.DB, taskID int64) error {
 	}
 
 	return nil
+}
+
+// updateRuleString 辅助函数，用于更新规则字符串
+//
+// 参数:
+//   - currentRuleStr: 当前规则字符串
+//   - newRules: 新规则切片
+//   - ruleType: 规则类型 (用于错误提示)
+//   - clearFlag: 一个布尔值，如果为 true，表示要清空规则
+//
+// 返回值:
+//   - string: 更新后的规则字符串
+func updateRuleString(currentRuleStr string, newRules []string, ruleType string, clearFlag bool) string {
+	// 如果 clearFlag 为 true，则直接返回空的 JSON 数组字符串，表示清空
+	if clearFlag {
+		return "[]"
+	}
+
+	// 如果没有新规则，则返回当前规则，不进行更新
+	if len(newRules) == 0 {
+		return currentRuleStr
+	}
+
+	marshaledRules, err := utils.MarshalRules(newRules)
+	if err != nil {
+		fmt.Printf("警告: %s编码失败: %v\n", ruleType, err)
+		return currentRuleStr // 编码失败，返回当前规则
+	}
+
+	if marshaledRules != currentRuleStr {
+		return marshaledRules // 新规则与当前规则不同，返回新规则
+	}
+	return currentRuleStr // 新规则与当前规则相同，返回当前规则
+}
+
+// updateInt 辅助函数，用于更新 int 类型的值
+//
+// 参数:
+//   - currentVal: 当前任务中的原始 int 值
+//   - newVal: 从命令行参数或配置中获取的新 int 值
+//   - unsetVal: 表示新值未设置或无效的特殊 int 值（例如 -1）
+//
+// 返回值:
+//   - int: 更新后的 int 值
+func updateInt(currentVal, newVal, unsetVal int) int {
+	if newVal != unsetVal && newVal != currentVal {
+		return newVal
+	}
+	return currentVal
+}
+
+// updateBooleanFromFlag 辅助函数，用于根据命令行或配置标志更新布尔值
+//
+// 参数:
+//   - currentValue: 当前任务中的原始布尔值
+//   - flagGetter: 一个函数，用于获取标志的字符串值（例如 compressF.Get）
+//   - paramName: 参数的名称，用于错误信息（例如 "压缩参数"）
+//
+// 返回值:
+//   - bool: 更新后的布尔值
+//   - error: 解析失败时返回错误信息，否则返回 nil
+func updateBooleanFromFlag(currentValue bool, flagGetter func() string, paramName string) (bool, error) {
+	flagValue := flagGetter() // 获取标志的字符串值
+
+	if flagValue == "" {
+		return currentValue, nil // 如果标志值为空，表示用户未指定新值，则返回当前值
+	}
+
+	// 尝试将字符串解析为布尔值
+	b, err := strconv.ParseBool(flagValue)
+	if err != nil {
+		// 如果解析失败，返回错误信息
+		return currentValue, fmt.Errorf("无法解析%s: %s", paramName, flagValue)
+	}
+
+	return b, nil // 解析成功，返回新的布尔值
+}
+
+// updateInt64 辅助函数，用于更新 int64 类型的值
+//
+// 参数:
+//   - currentVal: 当前任务中的原始 int64 值
+//   - newVal: 从命令行参数或配置中获取的新 int64 值
+//   - unsetVal: 表示新值未设置或无效的特殊 int64 值（例如 -1）
+//
+// 返回值:
+//   - int64: 更新后的 int64 值
+func updateInt64(currentVal, newVal, unsetVal int64) int64 {
+	if newVal != unsetVal && newVal != currentVal {
+		return newVal
+	}
+	return currentVal
 }
