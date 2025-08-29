@@ -58,17 +58,17 @@ func ListCmdMain(db *sqlx.DB) error {
 	// 添加数据行
 	for _, task := range data {
 		t.AppendRow(table.Row{
-			task.ID,
-			task.Name,
-			task.RetainCount,
-			task.RetainDays,
-			task.BackupDir,
-			task.StorageDir,
-			task.Compress,
-			task.IncludeRules,
-			task.ExcludeRules,
-			task.MaxFileSize,
-			task.MinFileSize,
+			task.ID,           // ID
+			task.Name,         // 任务名
+			task.RetainCount,  // 保留数量
+			task.RetainDays,   // 保留天数
+			task.BackupDir,    // 备份源目录
+			task.StorageDir,   // 备份存储目录
+			task.Compress,     // 是否压缩
+			task.IncludeRules, // 包含规则
+			task.ExcludeRules, // 排除规则
+			task.MaxFileSize,  // 最大文件大小
+			task.MinFileSize,  // 最小文件大小
 		})
 	}
 

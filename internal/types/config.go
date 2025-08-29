@@ -7,7 +7,7 @@ import (
 
 // RootConfig 根配置结构体, 用于解析TOML配置文件
 type RootConfig struct {
-	AddTask AddTaskConfig `toml:"AddTaskConfig"`
+	AddTaskConfig AddTaskConfig `toml:"AddTaskConfig"`
 }
 
 // AddTaskConfig 表示添加备份任务的配置结构

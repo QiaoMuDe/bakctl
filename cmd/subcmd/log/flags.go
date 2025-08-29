@@ -13,6 +13,7 @@ var (
 	logCmdTableStyle *qflag.EnumFlag // 日志表格样式
 )
 
+// InitLogCmd 初始化日志命令
 func InitLogCmd() *cmd.Cmd {
 	logCmd = cmd.NewCmd("log", "lg", flag.ExitOnError)
 	logCmd.SetDescription("显示备份记录日志")
