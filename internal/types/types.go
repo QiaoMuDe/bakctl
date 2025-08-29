@@ -1,16 +1,32 @@
 package types
 
-import "github.com/jedib0t/go-pretty/v6/table"
+import (
+	"path/filepath"
+
+	"gitee.com/MM-Q/bakctl/internal/utils"
+	"github.com/jedib0t/go-pretty/v6/table"
+)
 
 const (
 	// 数据库文件名
 	DBFilename = "bakctl.db3"
 
-	// 数据库文件所在目录
-	DataDirPath = "./test"
-
 	// 备份任务配置文件名
 	AddTaskFilename = "add_task.toml"
+
+	// 默认数据目录名字
+	DataDirName = ".bakctl"
+
+	// 默认备份目录名字
+	BackupDirName = "bak"
+)
+
+var (
+	// 数据目录路径（默认为用户主目录下的.bakctl）
+	DataDirPath = filepath.Join(utils.GetUserHomeDir(), DataDirName)
+
+	// 备份目录路径（默认为数据目录下的bak）
+	BackupDirPath = filepath.Join(DataDirPath, BackupDirName)
 )
 
 // BackupTask 表示数据库中的备份任务记录

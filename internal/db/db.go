@@ -17,11 +17,10 @@ import (
 //
 // 参数:
 //   - dbFilename: 数据库文件名（含后缀）
-//   - dataDirPath: 数据库文件所在目录路径
 //
 // 返回值:
 //   - error: 配置校验失败时返回错误信息，否则返回 nil
-func validate(dbFilename string, dataDirPath string) error {
+func validate(dbFilename string) error {
 	// 校验数据库文件名非空（必须含后缀，如 .db）
 	if dbFilename == "" {
 		return fmt.Errorf("数据库文件名不能为空, 请指定完整文件名(例: backup_system.db)")
@@ -32,10 +31,6 @@ func validate(dbFilename string, dataDirPath string) error {
 		return fmt.Errorf("数据库文件名必须以 .db 或 .db3 结尾")
 	}
 
-	// 校验数据目录路径非空
-	if dataDirPath == "" {
-		return fmt.Errorf("数据目录路径不能为空, 请指定数据库文件所在目录(例: /var/backup/db)")
-	}
 	return nil
 }
 
@@ -50,13 +45,23 @@ func validate(dbFilename string, dataDirPath string) error {
 //   - error: 初始化失败时返回错误信息，否则返回 nil
 func InitSQLite(dbFilename string, dataDirPath string) (*sqlx.DB, error) {
 	// 先校验配置合法性
-	if err := validate(dbFilename, dataDirPath); err != nil {
+	if err := validate(dbFilename); err != nil {
 		return nil, fmt.Errorf("配置校验失败：%w", err)
+	}
+
+	// 如果数据目录为空，则使用默认的数据目录
+	if dataDirPath == "" {
+		dataDirPath = types.DataDirPath
 	}
 
 	// 确保数据目录存在（目录不存在则自动创建，权限 0755）
 	if err := os.MkdirAll(dataDirPath, 0755); err != nil {
 		return nil, fmt.Errorf("创建数据目录失败：%w", err)
+	}
+
+	// 确保备份目录存在（目录不存在则自动创建，权限 0755）
+	if err := os.MkdirAll(types.BackupDirPath, 0755); err != nil {
+		return nil, fmt.Errorf("创建备份目录失败：%w", err)
 	}
 
 	// 获取完整路径
@@ -72,11 +77,6 @@ func InitSQLite(dbFilename string, dataDirPath string) (*sqlx.DB, error) {
 	sqlDB, err := sqlx.Connect("sqlite3", dbFullPath)
 	if err != nil {
 		return nil, fmt.Errorf("连接数据库失败 (路径：%s) :%w", dbFullPath, err)
-	}
-
-	// 验证连接可用性
-	if err := sqlDB.Ping(); err != nil {
-		return nil, fmt.Errorf("数据库 ping 失败：%w", err)
 	}
 
 	// 如果数据库文件不存在，则执行初始化脚本
@@ -207,13 +207,16 @@ func InsertAddTaskConfig(db *sqlx.DB, cfg *types.AddTaskConfig) error {
 		return fmt.Errorf("编码排除规则失败: %w", err)
 	}
 
+	// 构建实际存储目录：存储目录 + 备份源目录的目录名
+	actualStorageDir := filepath.Join(cfg.StorageDir, filepath.Base(cfg.BackupDir))
+
 	// 将 AddTaskConfig 转换为 BackupTask, 处理规则字段的 JSON 编码
 	backupTask := types.BackupTask{
 		Name:         cfg.Name,         // 任务名称
 		RetainCount:  cfg.RetainCount,  // 保留备份数量
 		RetainDays:   cfg.RetainDays,   // 保留天数
 		BackupDir:    cfg.BackupDir,    // 备份源目录
-		StorageDir:   cfg.StorageDir,   // 存储目录
+		StorageDir:   actualStorageDir, // 存储目录（存储目录 + 备份源目录名）
 		Compress:     cfg.Compress,     // 是否压缩
 		IncludeRules: includeRulesJSON, // 包含规则
 		ExcludeRules: excludeRulesJSON, // 排除规则
