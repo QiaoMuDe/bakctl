@@ -9,6 +9,7 @@ import (
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/edit"
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/list"
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/log"
+	"gitee.com/MM-Q/bakctl/cmd/subcmd/run"
 	"gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/qflag"
@@ -39,8 +40,11 @@ func main() {
 	// 获取log命令
 	logCmd := log.InitLogCmd()
 
+	// 获取run命令
+	runCmd := run.InitRunCmd()
+
 	// 注册子命令
-	if err := qflag.AddSubCmd(addCmd, editCmd, listCmd, logCmd); err != nil {
+	if err := qflag.AddSubCmd(addCmd, editCmd, listCmd, logCmd, runCmd); err != nil {
 		fmt.Printf("err: %v\n", err)
 		os.Exit(1)
 	}
@@ -91,6 +95,13 @@ func main() {
 
 	case logCmd.LongName(), logCmd.ShortName(): // log 命令
 		if err := log.LogCmdMain(db); err != nil {
+			fmt.Printf("err: %v\n", err)
+			os.Exit(1)
+		}
+		return
+
+	case runCmd.LongName(), runCmd.ShortName(): // run 命令
+		if err := run.RunCmdMain(db); err != nil {
 			fmt.Printf("err: %v\n", err)
 			os.Exit(1)
 		}
