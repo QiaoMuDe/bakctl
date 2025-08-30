@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
+	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/bakctl/internal/utils"
 	"github.com/jmoiron/sqlx"
 )
@@ -101,18 +102,6 @@ func hasAnyUpdateFlags() bool {
 		minSizeF.Get() != -1
 }
 
-// 固定的SQL更新语句
-const updateBackupTaskSQL = `UPDATE backup_tasks SET
-	retain_count = ?,
-	retain_days = ?,
-	compress = ?,
-	include_rules = ?,
-	exclude_rules = ?,
-	max_file_size = ?,
-	min_file_size = ?,
-	updated_at = CURRENT_TIMESTAMP
-WHERE ID = ?`
-
 // updateTask 更新单个任务
 //
 // 参数:
@@ -153,29 +142,22 @@ func updateTask(db *sqlx.DB, taskID int64) error {
 	// 排除规则
 	newExcludeRules := updateRuleString(currentTask.ExcludeRules, excludeF.Get(), "排除规则", clearExcludeF.Get())
 
-	// 执行更新
-	result, err := db.Exec(updateBackupTaskSQL,
-		newRetainCount,
-		newRetainDays,
-		newCompress,
-		newIncludeRules,
-		newExcludeRules,
-		newMaxFileSize,
-		newMinFileSize,
-		taskID)
-
-	if err != nil {
-		return fmt.Errorf("执行更新失败: %w", err)
+	// 创建 UpdateTaskParams 结构体实例
+	params := types.UpdateTaskParams{
+		ID:           taskID,
+		RetainCount:  newRetainCount,
+		RetainDays:   newRetainDays,
+		Compress:     newCompress,
+		IncludeRules: newIncludeRules,
+		ExcludeRules: newExcludeRules,
+		MaxFileSize:  newMaxFileSize,
+		MinFileSize:  newMinFileSize,
 	}
 
-	// 检查是否有行被更新
-	rowsAffected, err := result.RowsAffected()
+	// 调用 db 包中的 UpdateTask 函数，传入结构体
+	err = DB.UpdateTask(db, params)
 	if err != nil {
-		return fmt.Errorf("获取更新结果失败: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("任务 %s (ID: %d) 未被更新", currentTask.Name, taskID)
+		return fmt.Errorf("更新任务失败: %w", err)
 	}
 
 	return nil

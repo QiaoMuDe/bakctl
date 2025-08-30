@@ -47,6 +47,18 @@ type BackupTask struct {
 	MinFileSize  int64  `db:"min_file_size" json:"min_file_size"` // 最小文件大小（字节）
 }
 
+// UpdateTaskParams 封装了更新任务所需的参数
+type UpdateTaskParams struct {
+	ID           int64  `json:"id"`            // 任务唯一标识（自增主键）
+	RetainCount  int    `json:"retain_count"`  // 保留备份数量
+	RetainDays   int    `json:"retain_days"`   // 保留天数
+	Compress     bool   `json:"compress"`      // 是否压缩
+	IncludeRules string `json:"include_rules"` // 包含规则（JSON格式字符串）
+	ExcludeRules string `json:"exclude_rules"` // 排除规则（JSON格式字符串）
+	MaxFileSize  int64  `json:"max_file_size"` // 最大文件大小（字节）
+	MinFileSize  int64  `json:"min_file_size"` // 最小文件大小（字节）
+}
+
 // BackupRecord 对应 backup_records 表的结构体（适配 sqlx + SQLite）
 // 字段标签说明：
 // - db:"列名"：sqlx用于映射SQLite表列，确保与表字段名完全一致

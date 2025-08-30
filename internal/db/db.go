@@ -202,6 +202,55 @@ func GetTaskByID(db *sqlx.DB, taskID int64) (*types.BackupTask, error) {
 	return &task, nil
 }
 
+// 固定的SQL更新语句
+const updateBackupTaskSQL = `UPDATE backup_tasks SET
+	retain_count = ?,
+	retain_days = ?,
+	compress = ?,
+	include_rules = ?,
+	exclude_rules = ?,
+	max_file_size = ?,
+	min_file_size = ?,
+	updated_at = CURRENT_TIMESTAMP
+WHERE ID = ?`
+
+// UpdateTask 更新单个任务
+//
+// 参数:
+//   - db: 数据库连接
+//   - params: 包含所有更新参数的结构体
+//
+// 返回值:
+//   - error: 更新失败时返回错误信息，否则返回 nil
+func UpdateTask(db *sqlx.DB, params types.UpdateTaskParams) error {
+	// 执行更新
+	result, err := db.Exec(updateBackupTaskSQL,
+		params.RetainCount,
+		params.RetainDays,
+		params.Compress,
+		params.IncludeRules,
+		params.ExcludeRules,
+		params.MaxFileSize,
+		params.MinFileSize,
+		params.ID)
+
+	if err != nil {
+		return fmt.Errorf("执行更新失败: %w", err)
+	}
+
+	// 检查是否有行被更新
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("获取更新结果失败: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("任务 ID: %d 未被更新", params.ID)
+	}
+
+	return nil
+}
+
 // InsertAddTaskConfig 将 AddTaskConfig 结构体的数据插入到 backup_tasks 表中。
 // 它将 []string 类型的规则字段转换为 JSON 字符串进行存储。
 //
