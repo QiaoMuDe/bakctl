@@ -60,6 +60,12 @@ func addTaskFromConfigFile(db *sqlx.DB, configPath string) error {
 		return fmt.Errorf("配置文件验证失败: %v", err)
 	}
 
+	// 检查任务名是否已存在
+	taskID, err := DB.GetTaskIDByName(db, config.AddTaskConfig.Name)
+	if err == nil && taskID != 0 {
+		return fmt.Errorf("任务名称 '%s' 已存在，请使用其他名称", config.AddTaskConfig.Name)
+	}
+
 	// 将配置文件中的内容保存到数据库中
 	if err := DB.InsertAddTaskConfig(db, &config.AddTaskConfig); err != nil {
 		return fmt.Errorf("保存配置文件失败: %v", err)
@@ -94,6 +100,12 @@ func addTaskFromFlags(db *sqlx.DB) error {
 	// 检查必须参数
 	if err := config.Validate(); err != nil {
 		return fmt.Errorf("参数验证失败: %v", err)
+	}
+
+	// 检查任务名是否已存在
+	taskID, err := DB.GetTaskIDByName(db, config.Name)
+	if err == nil && taskID != 0 {
+		return fmt.Errorf("任务名称 '%s' 已存在，请使用其他名称", config.Name)
 	}
 
 	// 保存到数据库

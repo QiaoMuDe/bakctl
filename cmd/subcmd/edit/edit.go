@@ -114,7 +114,7 @@ func updateTask(db *sqlx.DB, taskID int64) error {
 	// 获取当前任务信息
 	currentTask, err := DB.GetTaskByID(db, taskID)
 	if err != nil {
-		return fmt.Errorf("获取任务信息失败: %w", err)
+		return fmt.Errorf("任务ID %d 不存在或获取任务信息失败: %w", taskID, err)
 	}
 
 	// 准备更新的值，如果用户指定了新值且与当前值不同，则使用新值，否则使用当前值
