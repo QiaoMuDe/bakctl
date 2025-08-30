@@ -20,7 +20,7 @@ func InitLogCmd() *cmd.Cmd {
 	logCmd.SetUseChinese(true)
 
 	// 添加标志
-	logCmdTableStyle = logCmd.Enum("table-style", "ts", "ro", "日志表格样式", types.TableStyleList)
+	logCmdTableStyle = logCmd.Enum("table-style", "ts", "df", "日志表格样式", types.TableStyleList)
 
 	return logCmd
 }

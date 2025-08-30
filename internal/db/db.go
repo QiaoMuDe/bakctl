@@ -81,13 +81,9 @@ func InitSQLite(dbFilename string, dataDirPath string) (*sqlx.DB, error) {
 
 	// 如果数据库文件不存在，则执行初始化脚本
 	if !dbExists {
-		fmt.Printf("数据库文件不存在，正在创建并执行初始化脚本：%s\n", dbFullPath)
 		if _, err := sqlDB.Exec(initDbScript); err != nil {
 			return nil, fmt.Errorf("执行数据库初始化脚本失败：%w", err)
 		}
-		fmt.Printf("数据库文件创建并初始化成功！完整路径：%s\n", dbFullPath)
-	} else {
-		fmt.Printf("数据库已存在，连接成功！完整路径：%s\n", dbFullPath)
 	}
 
 	return sqlDB, nil

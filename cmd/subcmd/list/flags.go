@@ -19,7 +19,7 @@ func InitListCmd() *cmd.Cmd {
 	listCmd.SetUseChinese(true)
 
 	// 添加标志
-	listCmdTableStyle = listCmd.Enum("table-style", "ts", "ro", "列表表格样式", types.TableStyleList)
+	listCmdTableStyle = listCmd.Enum("table-style", "ts", "df", "列表表格样式", types.TableStyleList)
 
 	return listCmd
 }
