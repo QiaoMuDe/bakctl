@@ -1,10 +1,6 @@
 package utils
 
 import (
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
 	"hash"
@@ -24,12 +20,12 @@ const (
 )
 
 // 支持的哈希算法列表
-var supportedAlgorithms = map[string]func() hash.Hash{
-	"md5":    md5.New,
-	"sha1":   sha1.New,
-	"sha256": sha256.New,
-	"sha512": sha512.New,
-}
+// var supportedAlgorithms = map[string]func() hash.Hash{
+// 	"md5":    md5.New,
+// 	"sha1":   sha1.New,
+// 	"sha256": sha256.New,
+// 	"sha512": sha512.New,
+// }
 
 // Checksum 计算文件哈希值
 //
