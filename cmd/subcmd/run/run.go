@@ -28,8 +28,10 @@ func RunCmdMain(db *sqlx.DB) error {
 		fmt.Printf("  %d. %s (ID: %d) - %s\n", i+1, task.Name, task.ID, task.BackupDir)
 	}
 
-	// TODO: 实现任务执行逻辑
-	fmt.Println("\n任务执行功能正在开发中...")
+	// 4. 执行选中的任务
+	if err := executeTasks(tasks); err != nil {
+		return fmt.Errorf("任务执行失败: %w", err)
+	}
 
 	return nil
 }
@@ -144,5 +146,58 @@ func validateFlags() error {
 		return fmt.Errorf("不能同时指定多个任务选择参数, 请只使用其中一个: -id, -ids, -all")
 	}
 
+	return nil
+}
+
+// executeTask 执行单个备份任务
+//
+// 参数：
+//   - task：要执行的备份任务
+//
+// 返回值：
+//   - error：如果执行过程中发生错误，则返回非 nil 错误信息；成功则返回 nil
+func executeTask(task types.BackupTask) error {
+	// TODO: 实现单个任务的执行逻辑
+	// 这里将包含：
+	// 1. 检查源目录是否存在
+	// 2. 创建备份目录（如果不存在）
+	// 3. 执行备份操作（复制文件）
+	// 4. 记录执行日志
+	// 5. 更新任务状态
+	return nil
+}
+
+// executeTasks 批量执行备份任务
+//
+// 参数：
+//   - tasks：要执行的备份任务切片
+//
+// 返回值：
+//   - error：如果执行过程中发生错误，则返回非 nil 错误信息；全部成功则返回 nil
+func executeTasks(tasks []types.BackupTask) error {
+	successCount := 0
+	failureCount := 0
+	
+	fmt.Printf("\n开始执行 %d 个备份任务...\n", len(tasks))
+	
+	for i, task := range tasks {
+		fmt.Printf("\n[%d/%d] 正在执行任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
+		
+		if err := executeTask(task); err != nil {
+			fmt.Printf("❌ 任务执行失败: %v\n", err)
+			failureCount++
+		} else {
+			fmt.Printf("✅ 任务执行成功\n")
+			successCount++
+		}
+	}
+	
+	// 显示执行结果统计
+	fmt.Printf("\n执行完成！成功: %d, 失败: %d\n", successCount, failureCount)
+	
+	if failureCount > 0 {
+		return fmt.Errorf("有 %d 个任务执行失败", failureCount)
+	}
+	
 	return nil
 }
