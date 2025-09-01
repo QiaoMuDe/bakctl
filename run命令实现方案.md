@@ -12,36 +12,33 @@
 ```go
 package run
 
-import "gitee.com/MM-Q/qflag"
-
-var (
-    // 任务选择参数
-    taskIDFlag   *qflag.IntFlag    // --id, -i: 指定任务ID
-    taskNameFlag *qflag.StringFlag // --name, -n: 指定任务名称
-    allTasksFlag *qflag.BoolFlag   // --all, -a: 运行所有任务
+import (
+    "flag"
     
-    // 执行控制参数
-    dryRunFlag   *qflag.BoolFlag   // --dry-run: 模拟运行
-    verboseFlag  *qflag.BoolFlag   // --verbose, -v: 详细输出
-    forceFlag    *qflag.BoolFlag   // --force, -f: 强制执行
-    
-    // 并发控制
-    parallelFlag *qflag.IntFlag    // --parallel, -p: 并发数量
+    "gitee.com/MM-Q/qflag"
+    "gitee.com/MM-Q/qflag/cmd"
 )
 
-func InitRunCmd() *qflag.SubCmd {
-    runCmd := qflag.NewSubCmd("run", "r", "运行备份任务")
-    
+var (
+    runCmd *cmd.Cmd // run命令
+
+    // 任务选择参数
+    taskIDFlag   *qflag.IntFlag    // --id, -i: 指定任务ID
+    taskIDsFlag  *qflag.SliceFlag  // --ids, -I: 指定多个任务ID
+    allTasksFlag *qflag.BoolFlag   // --all, -a: 运行所有任务
+)
+
+// InitRunCmd 初始化run子命令
+func InitRunCmd() *cmd.Cmd {
+    runCmd = cmd.NewCmd("run", "r", flag.ExitOnError)
+    runCmd.SetDescription("运行备份任务")
+    runCmd.SetUseChinese(true)
+
+    // 任务选择参数（互斥）
     taskIDFlag = runCmd.Int("id", "i", 0, "指定要运行的任务ID")
-    taskNameFlag = runCmd.String("name", "n", "", "指定要运行的任务名称")
+    taskIDsFlag = runCmd.Slice("ids", "I", []string{}, "指定多个任务ID进行批量运行")
     allTasksFlag = runCmd.Bool("all", "a", false, "运行所有任务")
-    
-    dryRunFlag = runCmd.Bool("dry-run", "", false, "模拟运行，不实际执行备份")
-    verboseFlag = runCmd.Bool("verbose", "v", false, "显示详细执行信息")
-    forceFlag = runCmd.Bool("force", "f", false, "强制执行，忽略警告")
-    
-    parallelFlag = runCmd.Int("parallel", "p", 1, "并发执行任务数量")
-    
+
     return runCmd
 }
 ```
@@ -52,6 +49,7 @@ package run
 
 import (
     "fmt"
+    "os"
     "sync"
     "time"
     
@@ -60,7 +58,34 @@ import (
     "github.com/jmoiron/sqlx"
 )
 
+// RunCmdMain run命令的主函数
 func RunCmdMain(db *sqlx.DB) error {
+    // TODO: 实现run命令的核心逻辑
+    fmt.Println("run命令功能正在开发中...")
+
+    // 临时显示参数信息用于测试
+    if taskIDFlag.Get() > 0 {
+        fmt.Printf("指定任务ID: %d
+", taskIDFlag.Get())
+    }
+
+    if len(taskIDsFlag.Get()) > 0 {
+        fmt.Printf("指定多个任务ID: %v
+", taskIDsFlag.Get())
+    }
+
+
+
+    if allTasksFlag.Get() {
+        fmt.Println("运行所有任务")
+    }
+
+    return nil
+}
+
+// TODO: 以下函数需要在后续开发中实现
+/*
+func RunCmdMainFull(db *sqlx.DB) error {
     // 1. 参数验证和任务选择
     tasks, err := selectTasks(db)
     if err != nil {
@@ -71,24 +96,29 @@ func RunCmdMain(db *sqlx.DB) error {
         return fmt.Errorf("没有找到要执行的任务")
     }
     
-    // 2. 显示执行计划
-    if err := showExecutionPlan(tasks); err != nil {
-        return err
+    // 2. 显示执行计划（除非是静默模式）
+    if !quietFlag.Get() {
+        if err := showExecutionPlan(tasks); err != nil {
+            return err
+        }
     }
     
     // 3. 执行备份任务
     return executeTasks(db, tasks)
 }
+*/
 
+// TODO: 以下函数需要在后续开发中实现
+/*
 func selectTasks(db *sqlx.DB) ([]types.BackupTask, error) {
     // 参数互斥检查
     paramCount := 0
     if taskIDFlag.Get() > 0 { paramCount++ }
-    if taskNameFlag.Get() != "" { paramCount++ }
+    if len(taskIDsFlag.Get()) > 0 { paramCount++ }
     if allTasksFlag.Get() { paramCount++ }
     
     if paramCount == 0 {
-        return nil, fmt.Errorf("请指定要运行的任务: --id, --name 或 --all")
+        return nil, fmt.Errorf("请指定要运行的任务: --id, --ids 或 --all")
     }
     if paramCount > 1 {
         return nil, fmt.Errorf("不能同时指定多个任务选择参数")
@@ -99,8 +129,8 @@ func selectTasks(db *sqlx.DB) ([]types.BackupTask, error) {
         return getTasksByID(db, taskIDFlag.Get())
     }
     
-    if taskNameFlag.Get() != "" {
-        return getTasksByName(db, taskNameFlag.Get())
+    if len(taskIDsFlag.Get()) > 0 {
+        return getTasksByIDs(db, taskIDsFlag.Get())
     }
     
     if allTasksFlag.Get() {
@@ -108,6 +138,34 @@ func selectTasks(db *sqlx.DB) ([]types.BackupTask, error) {
     }
     
     return nil, fmt.Errorf("未知错误")
+}
+
+func getTasksByIDs(db *sqlx.DB, ids []string) ([]types.BackupTask, error) {
+    // 使用新的批量查询函数
+    return DB.GetTasksByIDs(db, ids)
+}
+*/
+
+func getTasksByID(db *sqlx.DB, id int) ([]types.BackupTask, error) {
+    task, err := DB.GetBackupTaskByID(db, id)
+    if err != nil {
+        return nil, fmt.Errorf("获取任务失败: %w", err)
+    }
+    return []types.BackupTask{*task}, nil
+}
+
+
+
+func showExecutionPlan(tasks []types.BackupTask) error {
+    fmt.Printf("准备执行 %d 个备份任务:
+", len(tasks))
+    for i, task := range tasks {
+        fmt.Printf("  %d. %s (ID: %d) - %s
+", i+1, task.Name, task.ID, task.BackupDir)
+    }
+    
+    fmt.Println()
+    return nil
 }
 ```
 
@@ -186,9 +244,7 @@ type BackupExecutor struct {
 }
 
 type ExecutionConfig struct {
-    DryRun  bool
-    Verbose bool
-    Force   bool
+    // 基础配置，可根据需要扩展
 }
 
 type BackupResult struct {
@@ -201,13 +257,9 @@ type BackupResult struct {
 
 func NewBackupExecutor(db *sqlx.DB, task *types.BackupTask) *BackupExecutor {
     return &BackupExecutor{
-        db:   db,
-        task: task,
-        config: &ExecutionConfig{
-            DryRun:  dryRunFlag.Get(),
-            Verbose: verboseFlag.Get(),
-            Force:   forceFlag.Get(),
-        },
+        db:        db,
+        task:      task,
+        config:    &ExecutionConfig{},
         versionID: generateVersionID(),
     }
 }
@@ -217,10 +269,6 @@ func NewBackupExecutor(db *sqlx.DB, task *types.BackupTask) *BackupExecutor {
 ```go
 func (e *BackupExecutor) Execute() (*BackupResult, error) {
     startTime := time.Now()
-    
-    if e.config.DryRun {
-        return e.simulateBackup()
-    }
     
     // 1. 准备存储目录
     if err := e.prepareStorageDir(); err != nil {

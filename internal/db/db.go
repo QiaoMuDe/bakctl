@@ -163,7 +163,7 @@ func GetTaskIDByName(db *sqlx.DB, taskName string) (int64, error) {
 // 返回值：
 //   - string：任务名称
 //   - error：如果获取过程中发生错误，则返回非 nil 错误信息
-func GetTaskNameByID(db *sqlx.DB, taskID int64) (string, error) {
+func GetTaskNameByID(db *sqlx.DB, taskID int) (string, error) {
 	var taskName string
 	query := `SELECT name FROM backup_tasks WHERE ID = ?`
 	err := db.Get(&taskName, query, taskID)
@@ -185,7 +185,7 @@ func GetTaskNameByID(db *sqlx.DB, taskID int64) (string, error) {
 // 返回值：
 //   - *types.BackupTask：任务信息
 //   - error：如果获取过程中发生错误，则返回非 nil 错误信息
-func GetTaskByID(db *sqlx.DB, taskID int64) (*types.BackupTask, error) {
+func GetTaskByID(db *sqlx.DB, taskID int) (*types.BackupTask, error) {
 	var task types.BackupTask
 	query := `SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, compress, include_rules, exclude_rules, max_file_size, min_file_size FROM backup_tasks WHERE ID = ?`
 	err := db.Get(&task, query, taskID)
@@ -196,6 +196,66 @@ func GetTaskByID(db *sqlx.DB, taskID int64) (*types.BackupTask, error) {
 		return nil, fmt.Errorf("根据任务ID %d 获取任务信息失败: %w", taskID, err)
 	}
 	return &task, nil
+}
+
+// GetTasksByIDs 根据任务ID列表从数据库中批量获取任务信息。
+//
+// 参数：
+//   - db：数据库连接对象
+//   - taskIDs：任务ID字符串切片
+//
+// 返回值：
+//   - []types.BackupTask：任务信息列表
+//   - error：如果获取过程中发生错误，则返回非 nil 错误信息
+func GetTasksByIDs(db *sqlx.DB, taskIDs []string) ([]types.BackupTask, error) {
+	if len(taskIDs) == 0 {
+		return []types.BackupTask{}, nil
+	}
+
+	// 将字符串ID转换为interface{}切片，供sqlx.In使用
+	args := make([]interface{}, len(taskIDs))
+	for i, id := range taskIDs {
+		args[i] = id
+	}
+
+	// 使用sqlx.In展开参数
+	query := `SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, compress, include_rules, exclude_rules, max_file_size, min_file_size FROM backup_tasks WHERE ID IN (?)`
+	query, args, err := sqlx.In(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("构建批量查询SQL失败: %w", err)
+	}
+
+	// 重新绑定查询参数以适配数据库驱动
+	query = db.Rebind(query)
+
+	// 执行查询
+	var tasks []types.BackupTask
+	err = db.Select(&tasks, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("批量获取任务信息失败: %w", err)
+	}
+
+	return tasks, nil
+}
+
+// GetAllTasks 从数据库中获取所有任务信息。
+//
+// 参数：
+//   - db：数据库连接对象
+//
+// 返回值：
+//   - []types.BackupTask：所有任务信息列表
+//   - error：如果获取过程中发生错误，则返回非 nil 错误信息
+func GetAllTasks(db *sqlx.DB) ([]types.BackupTask, error) {
+	var tasks []types.BackupTask
+	query := `SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, compress, include_rules, exclude_rules, max_file_size, min_file_size FROM backup_tasks ORDER BY ID`
+
+	err := db.Select(&tasks, query)
+	if err != nil {
+		return nil, fmt.Errorf("获取所有任务信息失败: %w", err)
+	}
+
+	return tasks, nil
 }
 
 // 固定的SQL更新语句
