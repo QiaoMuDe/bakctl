@@ -218,7 +218,7 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB) error {
 	}
 
 	// 生成压缩包文件名
-	compressedFileName := fmt.Sprintf("%s-%d.tar.gz", task.Name, time.Now().Unix())
+	compressedFileName := fmt.Sprintf("%s_%d.zip", task.Name, time.Now().Unix())
 
 	// 生成压缩包文件路径
 	compressedFilePath := filepath.Join(task.StorageDir, compressedFileName)
