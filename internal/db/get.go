@@ -45,7 +45,6 @@ func GetAllBackupTasks(db *sqlx.DB) ([]types.BackupTask, error) {
 // queryGetAllBackupRecords SQL SELECT 语句，用于查询所有备份记录
 const queryGetAllBackupRecords = `
 	SELECT
-		ID,
 		task_id,
 		task_name,
 		version_id,

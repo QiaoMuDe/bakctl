@@ -39,11 +39,10 @@ func LogCmdMain(db *sqlx.DB) error {
 	t.SetOutputMirror(os.Stdout)
 
 	// 设置表头
-	t.AppendHeader(table.Row{"ID", "任务ID", "任务名", "版本ID", "备份文件名", "文件大小", "存储路径", "状态", "失败信息", "校验码", "创建时间"})
+	t.AppendHeader(table.Row{"任务ID", "任务名", "版本ID", "备份文件名", "文件大小", "存储路径", "状态", "失败信息", "校验码", "创建时间"})
 
 	// 设置列配置
 	t.SetColumnConfigs([]table.ColumnConfig{
-		{Name: "ID", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
 		{Name: "任务ID", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
 		{Name: "任务名", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 		{Name: "版本ID", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
@@ -59,7 +58,6 @@ func LogCmdMain(db *sqlx.DB) error {
 	// 添加数据行
 	for _, record := range data {
 		t.AppendRow(table.Row{
-			record.ID,        // ID
 			record.TaskID,    // 任务ID
 			record.TaskName,  // 任务名
 			record.VersionID, // 版本ID
@@ -68,7 +66,7 @@ func LogCmdMain(db *sqlx.DB) error {
 				if record.BackupFilename != "" {
 					return record.BackupFilename
 				}
-				return "-"
+				return "---"
 			}(), // 备份文件名
 			utils.FormatBytes(record.BackupSize), // 文件大小
 			record.StoragePath,                   // 存储路径
@@ -78,14 +76,14 @@ func LogCmdMain(db *sqlx.DB) error {
 				if record.FailureMessage != "" {
 					return record.FailureMessage
 				}
-				return "-"
+				return "---"
 			}(), // 失败信息
 			func() string {
 				// 如果校验码不为空，则返回校验码，否则返回 "-"
 				if record.Checksum != "" {
 					return record.Checksum
 				}
-				return "-"
+				return "---"
 			}(), // 校验码
 			record.CreatedAt, // 创建时间
 		})
