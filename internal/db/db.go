@@ -205,8 +205,14 @@ func InsertAddTaskConfig(db *sqlx.DB, cfg *types.AddTaskConfig) error {
 		return fmt.Errorf("编码排除规则失败: %w", err)
 	}
 
+	// 存储目录(默认: ~/.bakctl)
+	storageDir := cfg.StorageDir
+	if storageDir == "" {
+		storageDir = types.BackupDirPath
+	}
+
 	// 构建实际存储目录：存储目录 + 备份源目录的目录名
-	actualStorageDir := filepath.Join(cfg.StorageDir, filepath.Base(cfg.BackupDir))
+	actualStorageDir := filepath.Join(storageDir, filepath.Base(cfg.BackupDir))
 
 	// 将 AddTaskConfig 转换为 BackupTask, 处理规则字段的 JSON 编码
 	backupTask := types.BackupTask{

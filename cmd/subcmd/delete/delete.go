@@ -167,10 +167,10 @@ func selectTasksToDelete(db *sqlx.DB, taskIDs []int) ([]types.BackupTask, error)
 
 	// 使用 sqlx.In 构建IN查询
 	query := `
-		SELECT id, name, source_path, target_path, schedule_type, schedule_value, 
-		       enabled, created_at, updated_at
+		SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, 
+		       compress, include_rules, exclude_rules, max_file_size, min_file_size
 		FROM backup_tasks 
-		WHERE id IN (?)
+		WHERE ID IN (?)
 	`
 	query, args, err := sqlx.In(query, taskIDs)
 	if err != nil {
@@ -423,7 +423,7 @@ func deleteBackupRecords(db *sqlx.DB, taskID int) (int, error) {
 
 // deleteBackupTask 删除备份任务
 func deleteBackupTask(db *sqlx.DB, taskID int) error {
-	query := `DELETE FROM backup_tasks WHERE id = ?`
+	query := `DELETE FROM backup_tasks WHERE ID = ?`
 
 	result, err := db.Exec(query, taskID)
 	if err != nil {

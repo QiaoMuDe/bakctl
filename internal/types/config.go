@@ -15,7 +15,7 @@ type RootConfig struct {
 type AddTaskConfig struct {
 	Name         string   `toml:"name" comment:"任务名称(必填, 唯一, 不可重复)"`                                                      // 任务名称
 	BackupDir    string   `toml:"backup_dir" comment:"备份源目录(必填, 单个路径, 支持Windows和Linux路径)"`                                // 备份源目录
-	StorageDir   string   `toml:"storage_dir" comment:"备份存储目录(必填, 单个路径, 备份文件最终存放位置)"`                                     // 备份存储目录
+	StorageDir   string   `toml:"storage_dir" comment:"备份存储目录(必填, 单个路径, 备份文件最终存放位置, 如果为'', 则默认使用 ~/.bakctl)"`             // 备份存储目录
 	RetainCount  int      `toml:"retain_count" comment:"保留备份文件的数量(可选, 默认0个; 设置为0表示不按数量限制)"`                               // 保留备份文件的数量
 	RetainDays   int      `toml:"retain_days" comment:"保留备份文件的天数(可选, 默认0天; 设置为0表示不按天数限制)"`                                // 保留备份文件的天数
 	Compress     bool     `toml:"compress" comment:"是否压缩(可选, 默认false)"`                                                   // 是否压缩
@@ -66,11 +66,6 @@ func (cfg *AddTaskConfig) Validate() error {
 	// 验证备份源目录
 	if err := isValidString(cfg.BackupDir, true); err != nil {
 		return fmt.Errorf("备份源目录 %w", err)
-	}
-
-	// 验证存储目录
-	if err := isValidString(cfg.StorageDir, true); err != nil {
-		return fmt.Errorf("存储目录 %w", err)
 	}
 
 	return nil
