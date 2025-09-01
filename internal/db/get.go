@@ -57,6 +57,7 @@ const queryGetAllBackupRecords = `
 		storage_path,
 		created_at
 	FROM backup_records
+	ORDER BY created_at DESC
 `
 
 // GetAllBackupRecords 从数据库中获取所有备份记录。
