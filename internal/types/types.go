@@ -77,6 +77,15 @@ type BackupRecord struct {
 	CreatedAt      string `db:"created_at" json:"created_at"`                     // 备份时间（默认SQLite自动生成，ISO8601格式字符串，如"2024-05-20T15:30:00Z"）
 }
 
+// BackupResult 备份执行结果
+type BackupResult struct {
+	Success    bool   // 是否成功
+	ErrorMsg   string // 错误信息
+	BackupPath string // 备份文件路径
+	FileSize   int64  // 文件大小
+	Checksum   string // 校验码
+}
+
 // 定义存放表格样式的MAP
 var (
 	TableStyle = map[string]table.Style{
