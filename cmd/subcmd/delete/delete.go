@@ -209,7 +209,7 @@ func selectTasksToDelete(db *sqlx.DB, taskIDs []int) ([]types.BackupTask, error)
 // getBackupRecords 获取任务的备份记录
 func getBackupRecords(db *sqlx.DB, taskID int) ([]types.BackupRecord, error) {
 	query := `
-		SELECT ID, task_id, task_name, version_id, backup_filename, backup_size, 
+		SELECT task_id, task_name, version_id, backup_filename, backup_size, 
 		       storage_path, status, failure_message, checksum, created_at
 		FROM backup_records 
 		WHERE task_id = ?
