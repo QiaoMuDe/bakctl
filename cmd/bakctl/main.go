@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/add"
+	"gitee.com/MM-Q/bakctl/cmd/subcmd/delete"
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/edit"
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/list"
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/log"
@@ -43,8 +44,11 @@ func main() {
 	// 获取run命令
 	runCmd := run.InitRunCmd()
 
+	// 获取delete命令
+	deleteCmd := delete.InitDeleteCmd()
+
 	// 注册子命令
-	if err := qflag.AddSubCmd(addCmd, editCmd, listCmd, logCmd, runCmd); err != nil {
+	if err := qflag.AddSubCmd(addCmd, editCmd, listCmd, logCmd, runCmd, deleteCmd); err != nil {
 		fmt.Printf("err: %v\n", err)
 		os.Exit(1)
 	}
@@ -102,6 +106,13 @@ func main() {
 
 	case runCmd.LongName(), runCmd.ShortName(): // run 命令
 		if err := run.RunCmdMain(db); err != nil {
+			fmt.Printf("err: %v\n", err)
+			os.Exit(1)
+		}
+		return
+
+	case deleteCmd.LongName(), deleteCmd.ShortName(): // delete 命令
+		if err := delete.DeleteCmdMain(db); err != nil {
 			fmt.Printf("err: %v\n", err)
 			os.Exit(1)
 		}

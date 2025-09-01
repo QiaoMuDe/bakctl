@@ -2,6 +2,7 @@ package delete
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -73,6 +74,51 @@ func DeleteCmdMain(db *sqlx.DB) error {
 	return nil
 }
 
+// deleteFileOrDir 根据文件类型选择合适的删除方法
+func deleteFileOrDir(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // 文件已经不存在，认为删除成功
+		}
+		return err
+	}
+
+	if !info.IsDir() {
+		// 是文件，直接删除
+		return os.Remove(path)
+	}
+
+	// 是目录，检查是否为空
+	isEmpty, err := isDirEmpty(path)
+	if err != nil {
+		return err
+	}
+
+	if isEmpty {
+		// 空目录，使用 Remove
+		return os.Remove(path)
+	} else {
+		// 非空目录，使用 RemoveAll
+		return os.RemoveAll(path)
+	}
+}
+
+// isDirEmpty 检查目录是否为空
+func isDirEmpty(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = f.Close() }()
+
+	_, err = f.Readdir(1)
+	if err == io.EOF {
+		return true, nil // 目录为空
+	}
+	return false, err
+}
+
 // getTaskIDs 获取要删除的任务ID列表
 //
 // 返回:
@@ -125,14 +171,12 @@ func selectTasksToDelete(db *sqlx.DB, taskIDs []int) ([]types.BackupTask, error)
 		       enabled, created_at, updated_at
 		FROM backup_tasks 
 		WHERE id IN (?)
-		ORDER BY id
 	`
-
 	query, args, err := sqlx.In(query, taskIDs)
 	if err != nil {
 		return nil, fmt.Errorf("构建IN查询失败: %w", err)
 	}
-	query = db.Rebind(query)
+	query = db.Rebind(query) // 设置占位符
 
 	var tasks []types.BackupTask
 	err = db.Select(&tasks, query, args...)
@@ -342,7 +386,7 @@ func deleteBackupFiles(records []types.BackupRecord) (int, int, error) {
 		}
 
 		// 删除文件或目录
-		err := os.RemoveAll(record.StoragePath)
+		err := deleteFileOrDir(record.StoragePath)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("删除文件 %s 失败: %v", record.StoragePath, err))
 			skipped++

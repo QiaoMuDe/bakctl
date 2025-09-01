@@ -35,4 +35,3 @@ func InitDeleteCmd() *cmd.Cmd {
 
 	return deleteCmd
 }
-
