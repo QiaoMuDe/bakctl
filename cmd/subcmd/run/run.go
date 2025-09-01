@@ -2,10 +2,18 @@ package run
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
+	"time"
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
-	"gitee.com/MM-Q/bakctl/internal/types"
+	baktypes "gitee.com/MM-Q/bakctl/internal/types"
+	ut "gitee.com/MM-Q/bakctl/internal/utils"
+	"gitee.com/MM-Q/comprx"
+	"gitee.com/MM-Q/comprx/types"
+	"gitee.com/MM-Q/go-kit/hash"
+	"gitee.com/MM-Q/go-kit/id"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -29,7 +37,7 @@ func RunCmdMain(db *sqlx.DB) error {
 	}
 
 	// 4. 执行选中的任务
-	if err := executeTasks(tasks); err != nil {
+	if err := executeTasks(tasks, db); err != nil {
 		return fmt.Errorf("任务执行失败: %w", err)
 	}
 
@@ -44,14 +52,14 @@ func RunCmdMain(db *sqlx.DB) error {
 // 返回值：
 //   - []types.BackupTask：选中的任务列表
 //   - error：如果查询过程中发生错误，则返回非 nil 错误信息
-func selectTasks(db *sqlx.DB) ([]types.BackupTask, error) {
+func selectTasks(db *sqlx.DB) ([]baktypes.BackupTask, error) {
 	// 根据单个任务ID查询
 	if taskIDFlag.Get() > 0 {
 		task, err := DB.GetTaskByID(db, taskIDFlag.Get())
 		if err != nil {
 			return nil, fmt.Errorf("获取任务ID %d 失败: %w", taskIDFlag.Get(), err)
 		}
-		return []types.BackupTask{*task}, nil
+		return []baktypes.BackupTask{*task}, nil
 	}
 
 	// 根据多个任务ID批量查询
@@ -153,10 +161,11 @@ func validateFlags() error {
 //
 // 参数：
 //   - task：要执行的备份任务
+//   - db：数据库连接对象
 //
 // 返回值：
 //   - error：如果执行过程中发生错误，则返回非 nil 错误信息；成功则返回 nil
-func executeTask(task types.BackupTask) error {
+func executeTask(task baktypes.BackupTask, db *sqlx.DB) error {
 	// TODO: 实现单个任务的执行逻辑
 	// 这里将包含：
 	// 1. 检查源目录是否存在
@@ -164,6 +173,91 @@ func executeTask(task types.BackupTask) error {
 	// 3. 执行备份操作（复制文件）
 	// 4. 记录执行日志
 	// 5. 更新任务状态
+
+	// 检查源目录是否存在
+	if _, err := os.Stat(task.BackupDir); os.IsNotExist(err) {
+		return fmt.Errorf("源目录不存在: %s", task.BackupDir)
+	}
+
+	// 解析包含规则
+	include, err := ut.UnmarshalRules(task.IncludeRules)
+	if err != nil {
+		return fmt.Errorf("解析包含规则失败: %w", err)
+	}
+
+	// 解析排除规则
+	exclude, err := ut.UnmarshalRules(task.ExcludeRules)
+	if err != nil {
+		return fmt.Errorf("解析排除规则失败: %w", err)
+	}
+
+	// 构建过滤器
+	filters := types.FilterOptions{
+		Include: include,          // 包含规则
+		Exclude: exclude,          // 排除规则
+		MinSize: task.MinFileSize, // 最小文件大小
+		MaxSize: task.MaxFileSize, // 最大文件大小
+	}
+
+	// 压缩等级
+	var compressionLevel types.CompressionLevel
+	if task.Compress {
+		compressionLevel = types.CompressionLevelDefault
+	} else {
+		compressionLevel = types.CompressionLevelNone
+	}
+
+	// 构建压缩器配置
+	opts := comprx.Options{
+		CompressionLevel:      compressionLevel,         // 压缩等级
+		OverwriteExisting:     true,                     // 覆盖已存在的文件
+		ProgressEnabled:       true,                     // 启用进度显示
+		ProgressStyle:         types.ProgressStyleASCII, // 进度显示样式
+		DisablePathValidation: false,                    // 禁用路径验证
+		Filter:                filters,                  // 过滤器
+	}
+
+	// 生成压缩包文件名
+	compressedFileName := fmt.Sprintf("%s-%d.tar.gz", task.Name, time.Now().Unix())
+
+	// 生成压缩包文件路径
+	compressedFilePath := filepath.Join(task.StorageDir, compressedFileName)
+
+	// 执行备份操作
+	if err := comprx.PackOptions(compressedFilePath, task.BackupDir, opts); err != nil {
+		return fmt.Errorf("执行备份操作失败: %w", err)
+	}
+
+	// 校验哈希值
+	hashVal, hashErr := hash.ChecksumProgress(compressedFilePath, "sha1")
+	if hashErr != nil {
+		return fmt.Errorf("校验哈希值失败: %w", hashErr)
+	}
+
+	// 获取备份文件大小
+	fileInfo, statErr := os.Stat(compressedFilePath)
+	if statErr != nil {
+		return fmt.Errorf("获取备份文件大小失败: %w", statErr)
+	}
+
+	// 记录备份记录
+	rec := baktypes.BackupRecord{
+		TaskID:         task.ID,            // 任务ID
+		TaskName:       task.Name,          // 任务名称
+		VersionID:      id.GenMaskedID(),   // 版本ID
+		BackupFilename: compressedFileName, // 备份文件名
+		BackupSize:     fileInfo.Size(),    // 备份文件大小
+		StoragePath:    compressedFilePath, // 存储路径
+		Status:         true,               // 备份状态
+		FailureMessage: "",                 // 失败信息
+		Checksum:       hashVal,            // 哈希值
+	}
+
+	// 插入备份记录
+	if err := DB.InsertBackupRecord(db, &rec); err != nil {
+		return fmt.Errorf("插入备份记录失败: %w", err)
+	}
+
 	return nil
 }
 
@@ -171,19 +265,20 @@ func executeTask(task types.BackupTask) error {
 //
 // 参数：
 //   - tasks：要执行的备份任务切片
+//   - db：数据库连接对象
 //
 // 返回值：
 //   - error：如果执行过程中发生错误，则返回非 nil 错误信息；全部成功则返回 nil
-func executeTasks(tasks []types.BackupTask) error {
+func executeTasks(tasks []baktypes.BackupTask, db *sqlx.DB) error {
 	successCount := 0
 	failureCount := 0
-	
+
 	fmt.Printf("\n开始执行 %d 个备份任务...\n", len(tasks))
-	
+
 	for i, task := range tasks {
 		fmt.Printf("\n[%d/%d] 正在执行任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
-		
-		if err := executeTask(task); err != nil {
+
+		if err := executeTask(task, db); err != nil {
 			fmt.Printf("❌ 任务执行失败: %v\n", err)
 			failureCount++
 		} else {
@@ -191,13 +286,13 @@ func executeTasks(tasks []types.BackupTask) error {
 			successCount++
 		}
 	}
-	
+
 	// 显示执行结果统计
 	fmt.Printf("\n执行完成！成功: %d, 失败: %d\n", successCount, failureCount)
-	
+
 	if failureCount > 0 {
 		return fmt.Errorf("有 %d 个任务执行失败", failureCount)
 	}
-	
+
 	return nil
 }
