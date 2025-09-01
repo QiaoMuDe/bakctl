@@ -163,7 +163,7 @@ func GetTaskIDByName(db *sqlx.DB, taskName string) (int64, error) {
 // 返回值：
 //   - string：任务名称
 //   - error：如果获取过程中发生错误，则返回非 nil 错误信息
-func GetTaskNameByID(db *sqlx.DB, taskID int) (string, error) {
+func GetTaskNameByID(db *sqlx.DB, taskID int64) (string, error) {
 	var taskName string
 	query := `SELECT name FROM backup_tasks WHERE ID = ?`
 	err := db.Get(&taskName, query, taskID)
@@ -185,7 +185,7 @@ func GetTaskNameByID(db *sqlx.DB, taskID int) (string, error) {
 // 返回值：
 //   - *types.BackupTask：任务信息
 //   - error：如果获取过程中发生错误，则返回非 nil 错误信息
-func GetTaskByID(db *sqlx.DB, taskID int) (*types.BackupTask, error) {
+func GetTaskByID(db *sqlx.DB, taskID int64) (*types.BackupTask, error) {
 	var task types.BackupTask
 	query := `SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, compress, include_rules, exclude_rules, max_file_size, min_file_size FROM backup_tasks WHERE ID = ?`
 	err := db.Get(&task, query, taskID)
