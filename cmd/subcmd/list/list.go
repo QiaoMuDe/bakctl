@@ -38,7 +38,7 @@ func ListCmdMain(db *sqlx.DB) error {
 	t.SetOutputMirror(os.Stdout)
 
 	// 设置表头
-	t.AppendHeader(table.Row{"ID", "任务名", "保留数量", "保留天数", "备份源目录", "备份存储目录", "是否压缩", "包含规则", "排除规则", "最大文件大小", "最小文件大小"})
+	t.AppendHeader(table.Row{"ID", "任务名", "保留数量", "保留天数", "备份源目录", "备份存储目录", "是否压缩", "包含规则", "排除规则", "最大文件大小(字节)", "最小文件大小(字节)"})
 
 	// 设置列配置
 	t.SetColumnConfigs([]table.ColumnConfig{
@@ -51,8 +51,8 @@ func ListCmdMain(db *sqlx.DB) error {
 		{Name: "是否压缩", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
 		{Name: "包含规则", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 		{Name: "排除规则", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-		{Name: "最大文件大小", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
-		{Name: "最小文件大小", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
+		{Name: "最大文件大小(字节)", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
+		{Name: "最小文件大小(字节)", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
 	})
 
 	// 添加数据行

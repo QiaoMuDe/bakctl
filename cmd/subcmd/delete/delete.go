@@ -2,7 +2,6 @@ package delete
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -76,6 +75,7 @@ func DeleteCmdMain(db *sqlx.DB) error {
 
 // deleteFileOrDir 根据文件类型选择合适的删除方法
 func deleteFileOrDir(path string) error {
+	// 获取文件信息
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -84,8 +84,8 @@ func deleteFileOrDir(path string) error {
 		return err
 	}
 
+	// 是文件，直接删除
 	if !info.IsDir() {
-		// 是文件，直接删除
 		return os.Remove(path)
 	}
 
@@ -96,27 +96,26 @@ func deleteFileOrDir(path string) error {
 	}
 
 	if isEmpty {
-		// 空目录，使用 Remove
-		return os.Remove(path)
+		return os.Remove(path) // 空目录，使用 Remove
 	} else {
-		// 非空目录，使用 RemoveAll
-		return os.RemoveAll(path)
+		return os.RemoveAll(path) // 非空目录，使用 RemoveAll
 	}
 }
 
 // isDirEmpty 检查目录是否为空
+//
+// 参数:
+//   - path: 目录路径
+//
+// 返回:
+//   - bool: 目录是否为空
+//   - error: 检查失败时返回错误信息
 func isDirEmpty(path string) (bool, error) {
-	f, err := os.Open(path)
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return false, err
 	}
-	defer func() { _ = f.Close() }()
-
-	_, err = f.Readdir(1)
-	if err == io.EOF {
-		return true, nil // 目录为空
-	}
-	return false, err
+	return len(entries) == 0, nil
 }
 
 // getTaskIDs 获取要删除的任务ID列表
@@ -178,6 +177,7 @@ func selectTasksToDelete(db *sqlx.DB, taskIDs []int) ([]types.BackupTask, error)
 	}
 	query = db.Rebind(query) // 设置占位符
 
+	// 执行查询
 	var tasks []types.BackupTask
 	err = db.Select(&tasks, query, args...)
 	if err != nil {
@@ -207,6 +207,14 @@ func selectTasksToDelete(db *sqlx.DB, taskIDs []int) ([]types.BackupTask, error)
 }
 
 // getBackupRecords 获取任务的备份记录
+//
+// 参数:
+//   - db: 数据库连接
+//   - taskID: 任务ID
+//
+// 返回:
+//   - []types.BackupRecord: 备份记录列表
+//   - error: 获取失败时返回错误信息
 func getBackupRecords(db *sqlx.DB, taskID int) ([]types.BackupRecord, error) {
 	query := `
 		SELECT task_id, task_name, version_id, backup_filename, backup_size, 
@@ -226,6 +234,15 @@ func getBackupRecords(db *sqlx.DB, taskID int) ([]types.BackupRecord, error) {
 }
 
 // confirmDeletion 显示删除信息并确认
+//
+// 参数:
+//   - db: 数据库连接
+//   - tasks: 要删除的任务列表
+//   - keepFiles: 是否保留备份文件
+//
+// 返回:
+//   - bool: 用户是否确认删除
+//   - error: 确认失败时返回错误信息
 func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (bool, error) {
 	if forceF.Get() {
 		return true, nil
@@ -288,12 +305,22 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (boo
 }
 
 // deleteTasks 批量删除任务
+//
+// 参数:
+//   - db: 数据库连接
+//   - tasks: 要删除的任务列表
+//
+// 返回:
+//   - DeleteSummary: 删除结果摘要
+//   - error: 删除失败时返回错误信息
 func deleteTasks(db *sqlx.DB, tasks []types.BackupTask) (DeleteSummary, error) {
+	// 初始化结果
 	summary := DeleteSummary{
 		TotalTasks: len(tasks),
 		Results:    make([]DeleteResult, 0, len(tasks)),
 	}
 
+	// 删除任务
 	for i, task := range tasks {
 		fmt.Printf("[%d/%d] 正在删除任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
 
@@ -301,11 +328,11 @@ func deleteTasks(db *sqlx.DB, tasks []types.BackupTask) (DeleteSummary, error) {
 		summary.Results = append(summary.Results, result)
 
 		if result.Success {
-			summary.SuccessTasks++
-			summary.TotalFiles += result.FilesDeleted
-			summary.TotalRecords += result.RecordsDeleted
+			summary.SuccessTasks++                        // 成功的任务数加一
+			summary.TotalFiles += result.FilesDeleted     // 总的文件数加一
+			summary.TotalRecords += result.RecordsDeleted // 总的记录数加一
 		} else {
-			summary.FailedTasks++
+			summary.FailedTasks++ // 失败的任务数加一
 		}
 	}
 
@@ -313,6 +340,13 @@ func deleteTasks(db *sqlx.DB, tasks []types.BackupTask) (DeleteSummary, error) {
 }
 
 // deleteTask 删除单个任务
+//
+// 参数:
+//   - db: 数据库连接
+//   - task: 要删除的任务
+//
+// 返回:
+//   - DeleteResult: 删除结果
 func deleteTask(db *sqlx.DB, task types.BackupTask) DeleteResult {
 	result := DeleteResult{
 		TaskID:   int(task.ID),
@@ -369,6 +403,14 @@ func deleteTask(db *sqlx.DB, task types.BackupTask) DeleteResult {
 }
 
 // deleteBackupFiles 删除备份文件
+//
+// 参数:
+//   - records: 备份记录列表
+//
+// 返回:
+//   - int: 成功删除的文件数
+//   - int: 跳过的文件数
+//   - error: 删除失败时返回错误信息
 func deleteBackupFiles(records []types.BackupRecord) (int, int, error) {
 	var deleted, skipped int
 	var errors []string
@@ -405,6 +447,14 @@ func deleteBackupFiles(records []types.BackupRecord) (int, int, error) {
 }
 
 // deleteBackupRecords 删除备份记录
+//
+// 参数:
+//   - db: 数据库连接
+//   - taskID: 任务ID
+//
+// 返回:
+//   - int: 成功删除的记录数
+//   - error: 删除失败时返回错误信息
 func deleteBackupRecords(db *sqlx.DB, taskID int) (int, error) {
 	query := `DELETE FROM backup_records WHERE task_id = ?`
 
@@ -422,6 +472,13 @@ func deleteBackupRecords(db *sqlx.DB, taskID int) (int, error) {
 }
 
 // deleteBackupTask 删除备份任务
+//
+// 参数:
+//   - db: 数据库连接
+//   - taskID: 任务ID
+//
+// 返回:
+//   - error: 删除失败时返回错误信息
 func deleteBackupTask(db *sqlx.DB, taskID int) error {
 	query := `DELETE FROM backup_tasks WHERE ID = ?`
 
@@ -443,6 +500,9 @@ func deleteBackupTask(db *sqlx.DB, taskID int) error {
 }
 
 // printSummary 打印删除汇总
+//
+// 参数:
+//   - summary: 删除结果摘要
 func printSummary(summary DeleteSummary) {
 	fmt.Println()
 	fmt.Printf("删除完成！成功: %d个任务, 失败: %d个任务\n", summary.SuccessTasks, summary.FailedTasks)
