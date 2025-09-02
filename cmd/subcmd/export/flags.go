@@ -16,9 +16,12 @@ var (
 	allF *qflag.BoolFlag  // 导出所有任务
 
 	// 导出类型标志
-	cmdF    *qflag.BoolFlag   // 导出添加任务命令
-	scriptF *qflag.BoolFlag   // 导出一键备份脚本
-	pathF   *qflag.StringFlag // 指定导出的一键备份脚本路径
+	cmdF    *qflag.BoolFlag // 导出添加任务命令
+	scriptF *qflag.BoolFlag // 导出一键备份脚本
+
+	// 脚本平台标志
+	batF *qflag.BoolFlag // 生成Windows BAT脚本
+	shF  *qflag.BoolFlag // 生成Linux Bash脚本
 )
 
 func InitExportCmd() *cmd.Cmd {
@@ -35,8 +38,9 @@ func InitExportCmd() *cmd.Cmd {
 	cmdF = exportCmd.Bool("cmd", "c", false, "导出添加任务命令")
 	scriptF = exportCmd.Bool("script", "s", false, "导出一键备份脚本")
 
-	// 脚本路径标志
-	pathF = exportCmd.String("path", "p", "", "指定导出的一键备份脚本路径 (必须以.bat或.sh结尾)")
+	// 脚本平台标志 (与--script配合使用，二选一)
+	batF = exportCmd.Bool("", "bat", false, "生成Windows BAT脚本")
+	shF = exportCmd.Bool("", "sh", false, "生成Linux Bash脚本")
 
 	return exportCmd
 }
