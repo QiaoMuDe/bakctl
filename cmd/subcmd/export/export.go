@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
 	"github.com/jmoiron/sqlx"
 )
@@ -58,7 +59,7 @@ func validateExportFlags() error {
 
 func getTasksToExport(db *sqlx.DB) ([]types.BackupTask, error) {
 	if allF.Get() {
-		return getAllTasks(db)
+		return DB.GetAllTasks(db)
 	}
 
 	var taskIDs []int64
@@ -89,68 +90,10 @@ func getTasksToExport(db *sqlx.DB) ([]types.BackupTask, error) {
 		}
 	}
 
-	return getTasksByIDs(db, taskIDs)
-}
-
-func getAllTasks(db *sqlx.DB) ([]types.BackupTask, error) {
-	query := `
-        SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, 
-               compress, include_rules, exclude_rules, max_file_size, min_file_size
-        FROM backup_tasks 
-        ORDER BY ID
-    `
-
-	var tasks []types.BackupTask
-	err := db.Select(&tasks, query)
+	// 获取任务
+	tasks, err := DB.GetTasksByIDs(db, taskIDs)
 	if err != nil {
-		return nil, fmt.Errorf("获取所有任务失败: %w", err)
-	}
-
-	return tasks, nil
-}
-
-func getTasksByIDs(db *sqlx.DB, taskIDs []int64) ([]types.BackupTask, error) {
-	if len(taskIDs) == 0 {
-		return []types.BackupTask{}, nil
-	}
-
-	query := `
-        SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, 
-               compress, include_rules, exclude_rules, max_file_size, min_file_size
-        FROM backup_tasks 
-        WHERE ID IN (?)
-        ORDER BY ID
-    `
-
-	query, args, err := sqlx.In(query, taskIDs)
-	if err != nil {
-		return nil, fmt.Errorf("构建查询失败: %w", err)
-	}
-	query = db.Rebind(query)
-
-	var tasks []types.BackupTask
-	err = db.Select(&tasks, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("获取任务失败: %w", err)
-	}
-
-	// 检查是否所有任务都存在
-	if len(tasks) != len(taskIDs) {
-		foundIDs := make(map[int64]bool)
-		for _, task := range tasks {
-			foundIDs[task.ID] = true
-		}
-
-		var missingIDs []int64
-		for _, id := range taskIDs {
-			if !foundIDs[id] {
-				missingIDs = append(missingIDs, id)
-			}
-		}
-
-		if len(missingIDs) > 0 {
-			return tasks, fmt.Errorf("以下任务ID不存在: %v", missingIDs)
-		}
+		return nil, err
 	}
 
 	return tasks, nil

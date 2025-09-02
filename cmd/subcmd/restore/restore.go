@@ -1,12 +1,12 @@
 package restore
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	DB "gitee.com/MM-Q/bakctl/internal/db"
 	baktypes "gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/comprx"
 	"gitee.com/MM-Q/comprx/types"
@@ -38,13 +38,13 @@ func RestoreCmdMain(database *sqlx.DB) error {
 
 	// 2. 检查指定的任务ID是否存在
 	fmt.Printf("  → 检查任务是否存在...\n")
-	if !taskExists(database, int64(taskID)) {
+	if !DB.TaskExists(database, int64(taskID)) {
 		return fmt.Errorf("任务ID %d 不存在", taskID)
 	}
 
 	// 3. 检查指定的vid是否存在并且是这个任务ID的
 	fmt.Printf("  → 检查备份记录...\n")
-	record, err := getBackupRecord(database, int64(taskID), versionID)
+	record, err := DB.GetBackupRecordByTaskAndVersion(database, int64(taskID), versionID)
 	if err != nil {
 		return err
 	}
@@ -91,36 +91,6 @@ func RestoreCmdMain(database *sqlx.DB) error {
 	fmt.Printf("目标目录: %s\n", absTargetDir)
 
 	return nil
-}
-
-// taskExists 检查任务ID是否存在
-func taskExists(database *sqlx.DB, taskID int64) bool {
-	var count int
-	query := `SELECT COUNT(*) FROM backup_tasks WHERE ID = ?`
-	err := database.Get(&count, query, taskID)
-	return err == nil && count > 0
-}
-
-// getBackupRecord 根据任务ID和版本ID获取备份记录
-func getBackupRecord(database *sqlx.DB, taskID int64, versionID string) (*baktypes.BackupRecord, error) {
-	query := `
-		SELECT task_id, task_name, version_id, backup_filename, backup_size, 
-		       storage_path, status, failure_message, checksum, created_at
-		FROM backup_records 
-		WHERE task_id = ? AND version_id = ? AND status = 1
-	`
-
-	var record baktypes.BackupRecord
-	err := database.Get(&record, query, taskID, versionID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("未找到指定的备份记录 (任务ID: %d, 版本ID: %s)", taskID, versionID)
-		}
-
-		return nil, fmt.Errorf("查询备份记录失败: %w", err)
-	}
-
-	return &record, nil
 }
 
 // extractBackupFile 解压备份文件到目标目录

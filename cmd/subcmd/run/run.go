@@ -9,7 +9,7 @@ import (
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	baktypes "gitee.com/MM-Q/bakctl/internal/types"
-	ut "gitee.com/MM-Q/bakctl/internal/utils"
+	"gitee.com/MM-Q/bakctl/internal/utils"
 	"gitee.com/MM-Q/comprx"
 	"gitee.com/MM-Q/comprx/types"
 	"gitee.com/MM-Q/go-kit/hash"
@@ -253,12 +253,12 @@ func validateSourceDir(dir string) error {
 //   - []string：排除规则列表
 //   - error：如果发生错误，则返回错误信息；否则返回 nil
 func parseFilterRules(includeRules, excludeRules string) ([]string, []string, error) {
-	include, err := ut.UnmarshalRules(includeRules)
+	include, err := utils.UnmarshalRules(includeRules)
 	if err != nil {
 		return nil, nil, fmt.Errorf("解析包含规则失败: %w", err)
 	}
 
-	exclude, err := ut.UnmarshalRules(excludeRules)
+	exclude, err := utils.UnmarshalRules(excludeRules)
 	if err != nil {
 		return nil, nil, fmt.Errorf("解析排除规则失败: %w", err)
 	}
@@ -346,9 +346,15 @@ func selectTasks(db *sqlx.DB) ([]baktypes.BackupTask, error) {
 		return []baktypes.BackupTask{*task}, nil
 	}
 
+	// 将字符串切片转换为整数切片
+	taskIDs, err := utils.StringSliceToInt64(taskIDsFlag.Get())
+	if err != nil {
+		return nil, fmt.Errorf("转换任务ID列表失败: %w", err)
+	}
+
 	// 根据多个任务ID批量查询
 	if len(taskIDsFlag.Get()) > 0 {
-		tasks, err := DB.GetTasksByIDs(db, taskIDsFlag.Get())
+		tasks, err := DB.GetTasksByIDs(db, taskIDs)
 		if err != nil {
 			return nil, fmt.Errorf("批量获取任务失败: %w", err)
 		}

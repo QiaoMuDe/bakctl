@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
 	"github.com/jmoiron/sqlx"
 )
@@ -44,8 +45,7 @@ func DeleteCmdMain(db *sqlx.DB) error {
 		return fmt.Errorf("任务ID解析失败: %w", err)
 	}
 
-	// 查询要删除的任务
-	tasks, err := selectTasksToDelete(db, taskIDs)
+	tasks, err := DB.GetTasksByIDs(db, taskIDs)
 	if err != nil {
 		return fmt.Errorf("查找任务失败: %w", err)
 	}
@@ -106,13 +106,13 @@ func deleteFileOrDir(path string) error {
 // 返回:
 //   - int: 解析后的任务ID
 //   - error: 解析失败时返回错误信息
-func parseTaskID(idStr string) (int, error) {
+func parseTaskID(idStr string) (int64, error) {
 	idStr = strings.TrimSpace(idStr)
 	if idStr == "" {
 		return 0, fmt.Errorf("任务ID不能为空")
 	}
 
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("无效的任务ID格式: %s", idStr)
 	}
@@ -127,18 +127,18 @@ func parseTaskID(idStr string) (int, error) {
 // 返回:
 //   - []int: 要删除的任务ID列表
 //   - error: 获取失败时返回错误信息
-func getTaskIDs() ([]int, error) {
+func getTaskIDs() ([]int64, error) {
 	id := idF.Get()      // 从命令行参数获取任务ID
 	idsStr := idsF.Get() // 从命令行参数获取任务ID列表
 
 	// 如果指定了任务ID，则只处理一个任务
 	if id > 0 {
-		return []int{id}, nil
+		return []int64{id}, nil
 	}
 
 	// 如果指定了任务ID列表，则处理多个任务
-	var taskIDs []int
-	seen := make(map[int]bool) // 用于检查重复ID
+	var taskIDs []int64
+	seen := make(map[int64]bool) // 用于检查重复ID
 
 	for _, idStr := range idsStr {
 		if strings.TrimSpace(idStr) == "" {
@@ -161,132 +161,6 @@ func getTaskIDs() ([]int, error) {
 	return taskIDs, nil
 }
 
-// selectTasksToDelete 选择要删除的任务
-//
-// 参数:
-//   - db: 数据库连接
-//   - taskIDs: 要删除的任务ID列表
-//
-// 返回:
-//   - []types.BackupTask: 要删除的任务列表
-//   - error: 选择失败时返回错误信息
-func selectTasksToDelete(db *sqlx.DB, taskIDs []int) ([]types.BackupTask, error) {
-	if len(taskIDs) == 0 {
-		return nil, fmt.Errorf("任务ID列表为空")
-	}
-
-	// 使用 sqlx.In 构建IN查询
-	query := `
-		SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, 
-		       compress, include_rules, exclude_rules, max_file_size, min_file_size
-		FROM backup_tasks 
-		WHERE ID IN (?)
-	`
-	query, args, err := sqlx.In(query, taskIDs)
-	if err != nil {
-		return nil, fmt.Errorf("构建IN查询失败: %w", err)
-	}
-	query = db.Rebind(query) // 设置占位符
-
-	// 执行查询
-	var tasks []types.BackupTask
-	err = db.Select(&tasks, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("查询备份任务失败: %w", err)
-	}
-
-	// 检查是否所有任务都存在
-	if len(tasks) != len(taskIDs) {
-		foundIDs := make(map[int]bool)
-		for _, task := range tasks {
-			foundIDs[int(task.ID)] = true
-		}
-
-		var missingIDs []int
-		for _, id := range taskIDs {
-			if !foundIDs[id] {
-				missingIDs = append(missingIDs, id)
-			}
-		}
-
-		if len(missingIDs) > 0 {
-			return tasks, fmt.Errorf("以下任务ID不存在: %v", missingIDs)
-		}
-	}
-
-	return tasks, nil
-}
-
-// getBackupRecords 获取任务的备份记录
-//
-// 参数:
-//   - db: 数据库连接
-//   - taskID: 任务ID
-//
-// 返回:
-//   - []types.BackupRecord: 备份记录列表
-//   - error: 获取失败时返回错误信息
-func getBackupRecords(db *sqlx.DB, taskID int) ([]types.BackupRecord, error) {
-	query := `
-		SELECT task_id, task_name, version_id, backup_filename, backup_size, 
-		       storage_path, status, failure_message, checksum, created_at
-		FROM backup_records 
-		WHERE task_id = ?
-		ORDER BY created_at DESC
-	`
-
-	var records []types.BackupRecord
-	err := db.Select(&records, query, taskID)
-	if err != nil {
-		return nil, fmt.Errorf("获取备份记录失败: %w", err)
-	}
-
-	return records, nil
-}
-
-// getBatchBackupRecords 批量获取多个任务的备份记录
-//
-// 参数:
-//   - db: 数据库连接
-//   - taskIDs: 任务ID列表
-//
-// 返回:
-//   - map[int][]types.BackupRecord: 任务ID为键，备份记录列表为值
-//   - error: 获取失败时返回错误信息
-func getBatchBackupRecords(db *sqlx.DB, taskIDs []int) (map[int][]types.BackupRecord, error) {
-	if len(taskIDs) == 0 {
-		return make(map[int][]types.BackupRecord), nil
-	}
-
-	query := `
-		SELECT task_id, task_name, version_id, backup_filename, backup_size, 
-		       storage_path, status, failure_message, checksum, created_at
-		FROM backup_records 
-		WHERE task_id IN (?)
-		ORDER BY task_id, created_at DESC
-	`
-	query, args, err := sqlx.In(query, taskIDs)
-	if err != nil {
-		return nil, fmt.Errorf("构建批量查询失败: %w", err)
-	}
-	query = db.Rebind(query)
-
-	var allRecords []types.BackupRecord
-	err = db.Select(&allRecords, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("批量获取备份记录失败: %w", err)
-	}
-
-	// 按任务ID分组
-	recordsByTask := make(map[int][]types.BackupRecord)
-	for _, record := range allRecords {
-		taskID := int(record.TaskID)
-		recordsByTask[taskID] = append(recordsByTask[taskID], record)
-	}
-
-	return recordsByTask, nil
-}
-
 // confirmDeletion 显示删除信息并确认
 //
 // 参数:
@@ -306,12 +180,7 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (boo
 	fmt.Println()
 
 	// 批量获取所有任务的备份记录
-	taskIDs := make([]int, len(tasks))
-	for i, task := range tasks {
-		taskIDs[i] = int(task.ID)
-	}
-
-	recordsByTask, err := getBatchBackupRecords(db, taskIDs)
+	recordsByTask, err := DB.GetBatchBackupRecords(db, tasks)
 	if err != nil {
 		return false, fmt.Errorf("获取备份记录失败: %w", err)
 	}
@@ -320,7 +189,7 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (boo
 	totalFiles := 0
 
 	for _, task := range tasks {
-		records := recordsByTask[int(task.ID)]
+		records := recordsByTask[task.ID]
 		fileCount := len(records)
 		if keepFiles {
 			fileCount = 0
@@ -423,7 +292,7 @@ func deleteTask(db *sqlx.DB, task types.BackupTask) DeleteResult {
 	}
 
 	// 获取备份记录
-	records, err := getBackupRecords(db, int(task.ID))
+	records, err := DB.GetBackupRecordsByTaskID(db, task.ID)
 	if err != nil {
 		result.ErrorMsg = fmt.Sprintf("获取备份记录失败: %v", err)
 		return result
@@ -450,7 +319,7 @@ func deleteTask(db *sqlx.DB, task types.BackupTask) DeleteResult {
 	}
 
 	// 删除备份记录
-	recordsDeleted, err := deleteBackupRecords(db, int(task.ID))
+	recordsDeleted, err := DB.DeleteBackupRecords(db, task.ID)
 	if err != nil {
 		result.ErrorMsg = fmt.Sprintf("删除备份记录失败: %v", err)
 		return result
@@ -459,7 +328,7 @@ func deleteTask(db *sqlx.DB, task types.BackupTask) DeleteResult {
 	fmt.Printf("  ✓ 删除备份记录: %d个\n", recordsDeleted)
 
 	// 删除备份任务
-	err = deleteBackupTask(db, int(task.ID))
+	err = DB.DeleteBackupTask(db, task.ID)
 	if err != nil {
 		result.ErrorMsg = fmt.Sprintf("删除备份任务失败: %v", err)
 		return result
@@ -512,59 +381,6 @@ func deleteBackupFiles(records []types.BackupRecord) (int, int, error) {
 	}
 
 	return deleted, skipped, err
-}
-
-// deleteBackupRecords 删除备份记录
-//
-// 参数:
-//   - db: 数据库连接
-//   - taskID: 任务ID
-//
-// 返回:
-//   - int: 成功删除的记录数
-//   - error: 删除失败时返回错误信息
-func deleteBackupRecords(db *sqlx.DB, taskID int) (int, error) {
-	query := `DELETE FROM backup_records WHERE task_id = ?`
-
-	result, err := db.Exec(query, taskID)
-	if err != nil {
-		return 0, fmt.Errorf("删除备份记录失败: %w", err)
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("获取删除记录数失败: %w", err)
-	}
-
-	return int(affected), nil
-}
-
-// deleteBackupTask 删除备份任务
-//
-// 参数:
-//   - db: 数据库连接
-//   - taskID: 任务ID
-//
-// 返回:
-//   - error: 删除失败时返回错误信息
-func deleteBackupTask(db *sqlx.DB, taskID int) error {
-	query := `DELETE FROM backup_tasks WHERE ID = ?`
-
-	result, err := db.Exec(query, taskID)
-	if err != nil {
-		return fmt.Errorf("删除备份任务失败: %w", err)
-	}
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("获取删除任务数失败: %w", err)
-	}
-
-	if affected == 0 {
-		return fmt.Errorf("任务ID %d 不存在", taskID)
-	}
-
-	return nil
 }
 
 // printSummary 打印删除汇总
