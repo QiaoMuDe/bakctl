@@ -1,3 +1,14 @@
+// Package cleanup 提供备份任务适配器实现。
+//
+// 该文件实现了适配器模式，用于解决包之间的循环依赖问题。
+// 通过定义BackupTask接口和BackupTaskAdapter结构体，
+// 使得cleanup包可以独立于具体的备份任务实现，
+// 同时为其他包提供了统一的任务信息访问接口。
+//
+// 主要组件：
+//   - BackupTask: 备份任务接口，定义了获取任务信息的方法
+//   - BackupTaskAdapter: 适配器实现，将具体任务结构体适配到接口
+//   - NewBackupTaskAdapter: 工厂函数，创建适配器实例
 package cleanup
 
 // BackupTaskAdapter 备份任务适配器
