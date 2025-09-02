@@ -51,16 +51,16 @@ func CleanupBackupFilesWithLogging(task BackupTask, backupFileExt string, cl *co
 
 	// 输出清理结果
 	if result.DeletedFiles > 0 {
-		cl.Whitef("  → %s", FormatCleanupResult(result))
+		cl.Whitef("  → %s\n", FormatCleanupResult(result))
 	} else {
 		cl.White("  → 无需清理历史备份")
 	}
 
 	// 如果有删除失败的文件，输出警告
 	if len(result.ErrorFiles) > 0 {
-		cl.Yellowf("  → 警告: %d 个文件删除失败", len(result.ErrorFiles))
+		cl.Yellowf("  → 警告: %d 个文件删除失败\n", len(result.ErrorFiles))
 		for _, errorFile := range result.ErrorFiles {
-			cl.Yellowf("    - %s", errorFile)
+			cl.Yellowf("    - %s\n", errorFile)
 		}
 	}
 

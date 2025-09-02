@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -77,15 +76,17 @@ func CleanupBackupFiles(storageDir, taskName string, retainCount, retainDays int
 
 	// 4. 执行删除操作
 	for _, fileInfo := range filesToDelete {
+		// 删除文件
 		if err := os.Remove(fileInfo.FilePath); err != nil {
 			result.ErrorFiles = append(result.ErrorFiles, fileInfo.FilePath)
-		} else {
+		} else { // 删除成功
 			result.DeletedFiles++
 			result.DeletedPaths = append(result.DeletedPaths, fileInfo.FilePath)
 			result.TotalSize += fileInfo.FileSize
 		}
 	}
 
+	// 5. 统计保留的文件数
 	result.RetainedFiles = result.TotalFiles - result.DeletedFiles
 
 	return result, nil
@@ -109,9 +110,9 @@ func collectBackupFiles(storageDir, taskName, backupFileExt string) ([]BackupFil
 		return backupFiles, nil // 目录不存在，返回空列表
 	}
 
-	// 构建文件名匹配模式: {taskName}_{timestamp}.zip
-	// 使用正则表达式匹配: taskName_数字.zip
-	pattern := fmt.Sprintf(`^%s_(\d+)%s$`, regexp.QuoteMeta(taskName), regexp.QuoteMeta(backupFileExt))
+	// 构建文件名匹配模式: {taskName}_{YYYYMMDD_HHMMSS}.zip
+	// 使用正则表达式匹配: taskName_时间字符串.zip
+	pattern := fmt.Sprintf(`^%s_(\d{8}_\d{6})%s$`, regexp.QuoteMeta(taskName), regexp.QuoteMeta(backupFileExt))
 	regex, err := regexp.Compile(pattern)
 	if err != nil {
 		return nil, fmt.Errorf("编译正则表达式失败: %w", err)
@@ -144,11 +145,11 @@ func collectBackupFiles(storageDir, taskName, backupFileExt string) ([]BackupFil
 			continue // 不匹配，跳过
 		}
 
-		// 解析时间戳
-		timestampStr := matches[1]
-		timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
+		// 解析时间字符串 (格式: YYYYMMDD_HHMMSS)
+		timeStr := matches[1]
+		createdTime, err := time.Parse("20060102_150405", timeStr)
 		if err != nil {
-			continue // 时间戳解析失败，跳过
+			continue // 时间字符串解析失败，跳过
 		}
 
 		// 获取文件完整路径
@@ -162,12 +163,12 @@ func collectBackupFiles(storageDir, taskName, backupFileExt string) ([]BackupFil
 
 		// 创建备份文件信息
 		backupFileInfo := BackupFileInfo{
-			FilePath:    filePath,
-			FileName:    fileName,
-			TaskName:    taskName,
-			Timestamp:   timestamp,
-			CreatedTime: time.Unix(timestamp, 0),
-			FileSize:    fileInfo.Size(),
+			FilePath:    filePath,           // 文件路径
+			FileName:    fileName,           // 文件名
+			TaskName:    taskName,           // 任务名称
+			Timestamp:   createdTime.Unix(), // 转换为Unix时间戳用于兼容
+			CreatedTime: createdTime,        // 创建时间
+			FileSize:    fileInfo.Size(),    // 文件大小
 		}
 
 		backupFiles = append(backupFiles, backupFileInfo)
@@ -187,14 +188,30 @@ func collectBackupFiles(storageDir, taskName, backupFileExt string) ([]BackupFil
 //   - []BackupFileInfo: 需要删除的文件信息列表
 func determineFilesToDelete(backupFiles []BackupFileInfo, retainCount, retainDays int) []BackupFileInfo {
 	var filesToDelete []BackupFileInfo
+
+	// 快速失败：如果两个策略都没有设置，保留所有文件
+	if retainCount <= 0 && retainDays <= 0 {
+		return filesToDelete // 返回空列表
+	}
+
+	// 快速失败：如果没有备份文件，直接返回
+	if len(backupFiles) == 0 {
+		return filesToDelete
+	}
+
+	// 快速失败：如果只有一个文件，不删除任何文件
+	if len(backupFiles) <= 1 {
+		return filesToDelete
+	}
+
 	now := time.Now()
 
 	// 创建保留文件的映射，用于去重
 	retainedFiles := make(map[string]bool)
 
 	// 1. 根据保留数量策略确定要保留的文件
-	if retainCount > 0 && retainCount < len(backupFiles) {
-		// 保留最新的 retainCount 个文件
+	if retainCount > 0 {
+		// 保留最新的 retainCount 个文件（但不超过现有文件数量）
 		for i := 0; i < retainCount && i < len(backupFiles); i++ {
 			retainedFiles[backupFiles[i].FilePath] = true
 		}
@@ -210,16 +227,22 @@ func determineFilesToDelete(backupFiles []BackupFileInfo, retainCount, retainDay
 		}
 	}
 
-	// 3. 如果两个策略都没有设置，保留所有文件
-	if retainCount <= 0 && retainDays <= 0 {
-		return filesToDelete // 返回空列表
+	// 4. 安全检查：如果没有文件被标记为保留，至少保留最新的一个
+	if len(retainedFiles) == 0 && len(backupFiles) > 0 {
+		retainedFiles[backupFiles[0].FilePath] = true
 	}
 
-	// 4. 确定需要删除的文件（不在保留列表中的文件）
+	// 5. 确定需要删除的文件（不在保留列表中的文件）
 	for _, fileInfo := range backupFiles {
 		if !retainedFiles[fileInfo.FilePath] {
 			filesToDelete = append(filesToDelete, fileInfo)
 		}
+	}
+
+	// 6. 最终安全检查：确保不会删除所有文件
+	if len(filesToDelete) >= len(backupFiles) && len(backupFiles) > 0 {
+		// 如果要删除的文件数量等于或超过总文件数，只保留最新的一个
+		filesToDelete = backupFiles[1:] // 保留第一个（最新的），删除其余的
 	}
 
 	return filesToDelete

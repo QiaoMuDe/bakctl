@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"gitee.com/MM-Q/bakctl/internal/cleanup"
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	baktypes "gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/bakctl/internal/utils"
@@ -132,8 +133,15 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) e
 	result.FileSize = size     // 备份文件大小
 	result.Checksum = checksum // 备份文件哈希值
 
-	// 9. 预留的清理历史备份环境
-	// ...
+	// 9. 清理历史备份
+	cl.White("  → 清理历史备份...")
+	taskAdapter := cleanup.NewBackupTaskAdapter(
+		task.ID, task.Name, task.StorageDir,
+		task.RetainCount, task.RetainDays,
+	)
+	if err := cleanup.CleanupBackupFilesWithLogging(taskAdapter, baktypes.BackupFileExt, cl); err != nil {
+		cl.Yellowf("  → 清理警告: %v\n", err)
+	}
 
 	return nil
 }
@@ -284,7 +292,9 @@ func parseFilterRules(includeRules, excludeRules string) ([]string, []string, er
 // 返回值：
 //   - string：生成的备份文件路径
 func generateBackupPath(task baktypes.BackupTask) string {
-	filename := fmt.Sprintf("%s_%d%s", task.Name, time.Now().Unix(), baktypes.BackupFileExt)
+	// 使用时间字符串格式：YYYYMMDD_HHMMSS
+	timeStr := time.Now().Format("20060102_150405")
+	filename := fmt.Sprintf("%s_%s%s", task.Name, timeStr, baktypes.BackupFileExt)
 	return filepath.Join(task.StorageDir, filename)
 }
 
