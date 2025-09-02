@@ -35,36 +35,35 @@ type DeleteSummary struct {
 func DeleteCmdMain(db *sqlx.DB) error {
 	// 验证参数
 	if err := validateFlags(); err != nil {
-		return fmt.Errorf("参数验证失败: %w", err)
+		return fmt.Errorf("参数错误: %w", err)
 	}
 
 	// 获取要删除的任务ID列表
 	taskIDs, err := getTaskIDs()
 	if err != nil {
-		return fmt.Errorf("获取任务ID失败: %w", err)
+		return fmt.Errorf("任务ID解析失败: %w", err)
 	}
 
 	// 查询要删除的任务
 	tasks, err := selectTasksToDelete(db, taskIDs)
 	if err != nil {
-		return fmt.Errorf("查询任务失败: %w", err)
+		return fmt.Errorf("查找任务失败: %w", err)
 	}
 
 	// 用户确认
 	confirmed, err := confirmDeletion(db, tasks, keepFilesF.Get())
 	if err != nil {
-		return fmt.Errorf("确认删除失败: %w", err)
+		return fmt.Errorf("确认操作失败: %w", err)
 	}
 
 	if !confirmed {
-		fmt.Println("删除操作已取消")
-		return nil
+		return nil // 用户取消，不需要额外提示
 	}
 
 	// 执行删除
 	summary, err := deleteTasks(db, tasks)
 	if err != nil {
-		return fmt.Errorf("删除任务失败: %w", err)
+		return fmt.Errorf("执行删除操作失败: %w", err)
 	}
 
 	// 打印结果汇总
@@ -74,6 +73,12 @@ func DeleteCmdMain(db *sqlx.DB) error {
 }
 
 // deleteFileOrDir 根据文件类型选择合适的删除方法
+//
+// 参数:
+//   - path: 文件或目录路径
+//
+// 返回:
+//   - error: 删除失败时返回错误信息
 func deleteFileOrDir(path string) error {
 	// 获取文件信息
 	info, err := os.Stat(path)
@@ -89,33 +94,32 @@ func deleteFileOrDir(path string) error {
 		return os.Remove(path)
 	}
 
-	// 是目录，检查是否为空
-	isEmpty, err := isDirEmpty(path)
-	if err != nil {
-		return err
-	}
-
-	if isEmpty {
-		return os.Remove(path) // 空目录，使用 Remove
-	} else {
-		return os.RemoveAll(path) // 非空目录，使用 RemoveAll
-	}
+	// 是目录，直接使用 RemoveAll（能处理空目录和非空目录）
+	return os.RemoveAll(path)
 }
 
-// isDirEmpty 检查目录是否为空
+// parseTaskID 解析单个任务ID
 //
 // 参数:
-//   - path: 目录路径
+//   - idStr: 任务ID字符串
 //
 // 返回:
-//   - bool: 目录是否为空
-//   - error: 检查失败时返回错误信息
-func isDirEmpty(path string) (bool, error) {
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return false, err
+//   - int: 解析后的任务ID
+//   - error: 解析失败时返回错误信息
+func parseTaskID(idStr string) (int, error) {
+	idStr = strings.TrimSpace(idStr)
+	if idStr == "" {
+		return 0, fmt.Errorf("任务ID不能为空")
 	}
-	return len(entries) == 0, nil
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return 0, fmt.Errorf("无效的任务ID格式: %s", idStr)
+	}
+	if id <= 0 {
+		return 0, fmt.Errorf("任务ID必须大于0: %d", id)
+	}
+	return id, nil
 }
 
 // getTaskIDs 获取要删除的任务ID列表
@@ -134,17 +138,24 @@ func getTaskIDs() ([]int, error) {
 
 	// 如果指定了任务ID列表，则处理多个任务
 	var taskIDs []int
+	seen := make(map[int]bool) // 用于检查重复ID
+
 	for _, idStr := range idsStr {
-		idStr = strings.TrimSpace(idStr) // 移除首尾空格
-		if idStr == "" {
+		if strings.TrimSpace(idStr) == "" {
 			continue
 		}
 
-		id, err := strconv.Atoi(idStr)
+		parsedID, err := parseTaskID(idStr)
 		if err != nil {
-			return nil, fmt.Errorf("无效的任务ID: %s", idStr)
+			return nil, err
 		}
-		taskIDs = append(taskIDs, id)
+
+		// 检查重复
+		if seen[parsedID] {
+			return nil, fmt.Errorf("任务ID列表中存在重复的ID: %d", parsedID)
+		}
+		seen[parsedID] = true
+		taskIDs = append(taskIDs, parsedID)
 	}
 
 	return taskIDs, nil
@@ -233,6 +244,49 @@ func getBackupRecords(db *sqlx.DB, taskID int) ([]types.BackupRecord, error) {
 	return records, nil
 }
 
+// getBatchBackupRecords 批量获取多个任务的备份记录
+//
+// 参数:
+//   - db: 数据库连接
+//   - taskIDs: 任务ID列表
+//
+// 返回:
+//   - map[int][]types.BackupRecord: 任务ID为键，备份记录列表为值
+//   - error: 获取失败时返回错误信息
+func getBatchBackupRecords(db *sqlx.DB, taskIDs []int) (map[int][]types.BackupRecord, error) {
+	if len(taskIDs) == 0 {
+		return make(map[int][]types.BackupRecord), nil
+	}
+
+	query := `
+		SELECT task_id, task_name, version_id, backup_filename, backup_size, 
+		       storage_path, status, failure_message, checksum, created_at
+		FROM backup_records 
+		WHERE task_id IN (?)
+		ORDER BY task_id, created_at DESC
+	`
+	query, args, err := sqlx.In(query, taskIDs)
+	if err != nil {
+		return nil, fmt.Errorf("构建批量查询失败: %w", err)
+	}
+	query = db.Rebind(query)
+
+	var allRecords []types.BackupRecord
+	err = db.Select(&allRecords, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("批量获取备份记录失败: %w", err)
+	}
+
+	// 按任务ID分组
+	recordsByTask := make(map[int][]types.BackupRecord)
+	for _, record := range allRecords {
+		taskID := int(record.TaskID)
+		recordsByTask[taskID] = append(recordsByTask[taskID], record)
+	}
+
+	return recordsByTask, nil
+}
+
 // confirmDeletion 显示删除信息并确认
 //
 // 参数:
@@ -251,15 +305,22 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (boo
 	fmt.Println("即将删除以下备份任务：")
 	fmt.Println()
 
+	// 批量获取所有任务的备份记录
+	taskIDs := make([]int, len(tasks))
+	for i, task := range tasks {
+		taskIDs[i] = int(task.ID)
+	}
+
+	recordsByTask, err := getBatchBackupRecords(db, taskIDs)
+	if err != nil {
+		return false, fmt.Errorf("获取备份记录失败: %w", err)
+	}
+
 	totalRecords := 0
 	totalFiles := 0
 
 	for _, task := range tasks {
-		records, err := getBackupRecords(db, int(task.ID))
-		if err != nil {
-			return false, fmt.Errorf("获取任务 %d 的备份记录失败: %w", task.ID, err)
-		}
-
+		records := recordsByTask[int(task.ID)]
 		fileCount := len(records)
 		if keepFiles {
 			fileCount = 0
@@ -292,16 +353,23 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (boo
 	}
 	fmt.Println()
 
-	fmt.Print("确认删除? (y/N): ")
+	fmt.Print("确认删除? (输入 y 或 yes 确认，其他任意键取消): ")
 
 	var response string
-	_, err := fmt.Scanln(&response)
+	_, err = fmt.Scanln(&response)
 	if err != nil {
+		fmt.Println("输入读取失败，操作已取消")
 		return false, nil // 默认为不确认
 	}
 
 	response = strings.ToLower(strings.TrimSpace(response))
-	return response == "y" || response == "yes", nil
+	confirmed := response == "y" || response == "yes"
+
+	if !confirmed {
+		fmt.Println("操作已取消")
+	}
+
+	return confirmed, nil
 }
 
 // deleteTasks 批量删除任务
@@ -535,34 +603,9 @@ func validateFlags() error {
 		return fmt.Errorf("-id 和 -ids 参数不能同时使用")
 	}
 
-	// 检查ID值是否有效
+	// 检查单个ID值是否有效
 	if id < 0 {
 		return fmt.Errorf("任务ID必须大于0")
-	}
-
-	// 检查IDs值是否有效
-	if len(idsStr) > 0 {
-		seen := make(map[int]bool)
-		for _, idStr := range idsStr {
-			idStr = strings.TrimSpace(idStr)
-			if idStr == "" {
-				continue
-			}
-
-			id, err := strconv.Atoi(idStr)
-			if err != nil {
-				return fmt.Errorf("无效的任务ID: %s", idStr)
-			}
-			if id <= 0 {
-				return fmt.Errorf("任务ID必须大于0: %d", id)
-			}
-
-			// 检查重复
-			if seen[id] {
-				return fmt.Errorf("任务ID列表中存在重复的ID: %d", id)
-			}
-			seen[id] = true
-		}
 	}
 
 	return nil
