@@ -3,15 +3,25 @@ package list
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/colorlib"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/jmoiron/sqlx"
 )
 
-func ListCmdMain(db *sqlx.DB) error {
+// listCmdMain 列出所有备份任务
+//
+// 参数:
+//   - db: 数据库连接
+//   - cl: 颜色库
+//
+// 返回:
+//   - error: 错误信息
+func ListCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 创建表格
 	t := table.NewWriter()
 
@@ -30,7 +40,8 @@ func ListCmdMain(db *sqlx.DB) error {
 
 	// 检查是否有任务
 	if len(data) == 0 {
-		fmt.Println("没有备份任务")
+		cl.Yellow("当前没有备份任务")
+		cl.Whitef("提示: 使用 '%s add' 命令添加新的备份任务", filepath.Base(os.Args[0]))
 		return nil
 	}
 

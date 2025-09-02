@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"runtime/debug"
 
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/add"
@@ -15,6 +16,7 @@ import (
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/run"
 	"gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/colorlib"
 	"gitee.com/MM-Q/qflag"
 	"gitee.com/MM-Q/verman"
 )
@@ -27,6 +29,9 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+
+	// 获取输出渲染器
+	CL := colorlib.New()
 
 	// 初始化全局主命令
 	initMainCmd()
@@ -57,7 +62,7 @@ func main() {
 
 	// 注册子命令
 	if err := qflag.AddSubCmd(addCmd, editCmd, listCmd, logCmd, runCmd, deleteCmd, exportCmd, restoreCmd); err != nil {
-		fmt.Printf("err: %v\n", err)
+		CL.PrintError(err)
 		os.Exit(1)
 	}
 
@@ -70,12 +75,15 @@ func main() {
 	// 初始化数据库配置
 	db, err := db.InitSQLite(types.DBFilename, types.DataDirPath)
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
+		CL.PrintError(err)
 		os.Exit(1)
 	}
 	defer func() { _ = db.Close() }()
 
-	// 获取命令名
+	// 设置颜色（默认启用，除非用户指定禁用）
+	CL.SetColor(!noColorF.Get())
+
+	// 获取命令名, 如果没有命令名, 则打印帮助信息
 	cmdName := qflag.Arg(0)
 	if cmdName == "" {
 		qflag.PrintHelp()
@@ -85,77 +93,84 @@ func main() {
 	// 路由命令
 	switch cmdName {
 	case addCmd.LongName(), addCmd.ShortName(): // add 命令
-		if err := add.AddCmdMain(db); err != nil {
-			fmt.Printf("err: %v\n", err)
+		if err := add.AddCmdMain(db, CL); err != nil {
+			CL.PrintError(err)
 			os.Exit(1)
 		}
 		return
 
 	case editCmd.LongName(), editCmd.ShortName(): // edit 命令
-		if err := edit.EditCmdMain(db); err != nil {
-			fmt.Printf("err: %v\n", err)
+		if err := edit.EditCmdMain(db, CL); err != nil {
+			CL.PrintError(err)
 			os.Exit(1)
 		}
 		return
 
 	case listCmd.LongName(), listCmd.ShortName(): // list 命令
-		if err := list.ListCmdMain(db); err != nil {
-			fmt.Printf("err: %v\n", err)
+		if err := list.ListCmdMain(db, CL); err != nil {
+			CL.PrintError(err)
 			os.Exit(1)
 		}
 		return
 
 	case logCmd.LongName(), logCmd.ShortName(): // log 命令
-		if err := log.LogCmdMain(db); err != nil {
-			fmt.Printf("err: %v\n", err)
+		if err := log.LogCmdMain(db, CL); err != nil {
+			CL.PrintError(err)
 			os.Exit(1)
 		}
 		return
 
 	case runCmd.LongName(), runCmd.ShortName(): // run 命令
-		if err := run.RunCmdMain(db); err != nil {
-			fmt.Printf("err: %v\n", err)
+		if err := run.RunCmdMain(db, CL); err != nil {
+			CL.PrintError(err)
 			os.Exit(1)
 		}
 		return
 
 	case deleteCmd.LongName(), deleteCmd.ShortName(): // delete 命令
-		if err := delete.DeleteCmdMain(db); err != nil {
-			fmt.Printf("err: %v\n", err)
+		if err := delete.DeleteCmdMain(db, CL); err != nil {
+			CL.PrintError(err)
 			os.Exit(1)
 		}
 		return
 
 	case exportCmd.LongName(), exportCmd.ShortName(): // export 命令
 		if err := export.ExportCmdMain(db); err != nil {
-			fmt.Printf("err: %v\n", err)
+			CL.PrintError(err)
 			os.Exit(1)
 		}
 		return
 
 	case restoreCmd.LongName(), restoreCmd.ShortName(): // restore 命令
-		if err := restore.RestoreCmdMain(db); err != nil {
-			fmt.Printf("err: %v\n", err)
+		if err := restore.RestoreCmdMain(db, CL); err != nil {
+			CL.PrintError(err)
 			os.Exit(1)
 		}
 		return
 
 	default:
-		fmt.Printf("unknown command: %s\n", cmdName)
+		CL.PrintErrorf("unknown command: %s\n", cmdName)
 		os.Exit(1)
 	}
 }
 
+var (
+	noColorF *qflag.BoolFlag // 禁用颜色
+)
+
 // 初始化主命令
 func initMainCmd() {
 	// 全局主命令的参数设置
-	qflag.SetUseChinese(true)
-	qflag.SetEnableCompletion(true)
+	qflag.SetUseChinese(true)       // 使用中文版帮助信息
+	qflag.SetEnableCompletion(true) // 开启自动补全
 
 	// 获取版本信息
 	v := verman.Get()
-	qflag.SetVersionf("%s %s", v.AppName, v.GitVersion)
+	qflag.SetVersionf("%s version %s %s/%s", v.AppName, v.GitVersion, runtime.GOOS, runtime.GOARCH)
 
 	// 设置描述
-	qflag.SetDescription("bakctl is a backup system for Linux")
+	qflag.SetDescription("bakctl 是一个跨平台的备份管理工具，支持数据库存储和全面的备份操作")
+
+	// 添加禁用颜色选项
+	noColorF = qflag.Bool("no-color", "nc", false, "禁用颜色输出")
 }

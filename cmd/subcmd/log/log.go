@@ -3,17 +3,26 @@ package log
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/bakctl/internal/utils"
+	"gitee.com/MM-Q/colorlib"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/jmoiron/sqlx"
 )
 
 // LogCmdMain 日志命令主函数
-func LogCmdMain(db *sqlx.DB) error {
+//
+// 参数:
+//   - db: 数据库连接
+//   - cl: 颜色库
+//
+// 返回值:
+//   - error: 错误信息
+func LogCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 参数验证
 	if err := validateLogFlags(); err != nil {
 		return err
@@ -37,7 +46,8 @@ func LogCmdMain(db *sqlx.DB) error {
 
 	// 提前检查是否有备份记录
 	if len(data) == 0 {
-		fmt.Println("没有备份记录")
+		cl.Yellow("当前没有备份记录")
+		cl.Whitef("提示: 使用 '%s run' 命令执行备份任务来生成记录", filepath.Base(os.Args[0]))
 		return nil
 	}
 

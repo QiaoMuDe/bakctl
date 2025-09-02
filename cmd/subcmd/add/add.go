@@ -6,19 +6,27 @@ import (
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/colorlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/pelletier/go-toml/v2"
 )
 
 // addCmdMain 添加任务的主函数
-func AddCmdMain(db *sqlx.DB) error {
+//
+// 参数:
+//   - db: 数据库连接
+//   - cl: 颜色库
+//
+// 返回值:
+//   - error: 错误信息
+func AddCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 如果指定了生成配置文件的选项，则生成配置文件
 	if genF.Get() {
 		if err := GenerateConfigFile(); err != nil {
 			return err
 		}
 
-		fmt.Println("已生成配置文件:", types.AddTaskFilename)
+		cl.Green("已生成配置文件:", types.AddTaskFilename)
 		return nil
 	}
 
@@ -27,11 +35,11 @@ func AddCmdMain(db *sqlx.DB) error {
 
 	// 优先使用配置文件，如果没有配置文件则尝试使用命令行标志
 	if configPath != "" {
-		return addTaskFromConfigFile(db, configPath)
+		return addTaskFromConfigFile(db, configPath, cl)
 	}
 
 	// 尝试从命令行标志创建任务
-	return addTaskFromFlags(db)
+	return addTaskFromFlags(db, cl)
 }
 
 // addTaskFromConfigFile 从配置文件添加任务
@@ -39,10 +47,11 @@ func AddCmdMain(db *sqlx.DB) error {
 // 参数:
 //   - db: 数据库连接
 //   - configPath: 配置文件路径
+//   - cl: 颜色库
 //
 // 返回值:
 //   - error: 错误信息
-func addTaskFromConfigFile(db *sqlx.DB, configPath string) error {
+func addTaskFromConfigFile(db *sqlx.DB, configPath string, cl *colorlib.ColorLib) error {
 	// 读取配置文件
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -70,7 +79,8 @@ func addTaskFromConfigFile(db *sqlx.DB, configPath string) error {
 	if err := DB.InsertAddTaskConfig(db, &config.AddTaskConfig); err != nil {
 		return fmt.Errorf("保存配置文件失败: %v", err)
 	}
-	fmt.Println("添加任务成功!")
+
+	cl.Greenf("任务 '%s' 添加成功!", config.AddTaskConfig.Name)
 
 	return nil
 }
@@ -79,10 +89,11 @@ func addTaskFromConfigFile(db *sqlx.DB, configPath string) error {
 //
 // 参数:
 //   - db: 数据库连接
+//   - cl: 颜色库
 //
 // 返回值:
 //   - error: 错误信息
-func addTaskFromFlags(db *sqlx.DB) error {
+func addTaskFromFlags(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 构建任务配置
 	config := &types.AddTaskConfig{
 		Name:         nameF.Get(),        // 任务名称
@@ -113,7 +124,7 @@ func addTaskFromFlags(db *sqlx.DB) error {
 		return fmt.Errorf("保存任务失败: %v", err)
 	}
 
-	fmt.Println("添加任务成功!")
+	cl.Greenf("任务 '%s' 添加成功!", config.Name)
 	return nil
 }
 

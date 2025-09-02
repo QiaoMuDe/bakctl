@@ -7,11 +7,19 @@ import (
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/bakctl/internal/utils"
+	"gitee.com/MM-Q/colorlib"
 	"github.com/jmoiron/sqlx"
 )
 
 // EditCmdMain 编辑命令主函数
-func EditCmdMain(db *sqlx.DB) error {
+//
+// 参数:
+//   - db: 数据库连接
+//   - cl: 颜色库
+//
+// 返回值:
+//   - error: 执行失败时返回错误信息，否则返回 nil
+func EditCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 获取要编辑的任务ID列表
 	taskIDs, err := getTaskIDs()
 	if err != nil {
@@ -32,14 +40,14 @@ func EditCmdMain(db *sqlx.DB) error {
 	successCount := 0
 	for _, taskID := range taskIDs {
 		if err := updateTask(db, taskID); err != nil {
-			fmt.Printf("更新任务ID %d 失败: %v\n", taskID, err)
+			cl.Redf("更新任务ID %d 失败: %v\n", taskID, err)
 		} else {
 			successCount++
-			fmt.Printf("任务ID %d 更新成功\n", taskID)
+			cl.Greenf("任务ID %d 更新成功\n", taskID)
 		}
 	}
 
-	fmt.Printf("成功更新 %d/%d 个任务\n", successCount, len(taskIDs))
+	cl.Greenf("成功更新 %d/%d 个任务\n", successCount, len(taskIDs))
 	return nil
 }
 
@@ -137,10 +145,16 @@ func updateTask(db *sqlx.DB, taskID int64) error {
 	}
 
 	// 包含规则
-	newIncludeRules := updateRuleString(currentTask.IncludeRules, includeF.Get(), "包含规则", clearIncludeF.Get())
+	newIncludeRules, includrErr := updateRuleString(currentTask.IncludeRules, includeF.Get(), "包含规则", clearIncludeF.Get())
+	if includrErr != nil {
+		return includrErr // 如果解析失败，直接返回错误
+	}
 
 	// 排除规则
-	newExcludeRules := updateRuleString(currentTask.ExcludeRules, excludeF.Get(), "排除规则", clearExcludeF.Get())
+	newExcludeRules, excludeErr := updateRuleString(currentTask.ExcludeRules, excludeF.Get(), "排除规则", clearExcludeF.Get())
+	if excludeErr != nil {
+		return excludeErr // 如果解析失败，直接返回错误
+	}
 
 	// 创建 UpdateTaskParams 结构体实例
 	params := types.UpdateTaskParams{
@@ -173,27 +187,27 @@ func updateTask(db *sqlx.DB, taskID int64) error {
 //
 // 返回值:
 //   - string: 更新后的规则字符串
-func updateRuleString(currentRuleStr string, newRules []string, ruleType string, clearFlag bool) string {
+//   - error: 如果解析规则字符串失败，则返回错误信息，否则返回 nil
+func updateRuleString(currentRuleStr string, newRules []string, ruleType string, clearFlag bool) (string, error) {
 	// 如果 clearFlag 为 true，则直接返回空的 JSON 数组字符串，表示清空
 	if clearFlag {
-		return "[]"
+		return "[]", nil
 	}
 
 	// 如果没有新规则，则返回当前规则，不进行更新
 	if len(newRules) == 0 {
-		return currentRuleStr
+		return currentRuleStr, nil
 	}
 
 	marshaledRules, err := utils.MarshalRules(newRules)
 	if err != nil {
-		fmt.Printf("警告: %s编码失败: %v\n", ruleType, err)
-		return currentRuleStr // 编码失败，返回当前规则
+		return "", fmt.Errorf("无法解析%s: %v", ruleType, err)
 	}
 
 	if marshaledRules != currentRuleStr {
-		return marshaledRules // 新规则与当前规则不同，返回新规则
+		return marshaledRules, nil // 新规则与当前规则不同，返回新规则
 	}
-	return currentRuleStr // 新规则与当前规则相同，返回当前规则
+	return currentRuleStr, nil // 新规则与当前规则相同，返回当前规则
 }
 
 // updateInt 辅助函数，用于更新 int 类型的值

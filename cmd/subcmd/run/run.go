@@ -10,6 +10,7 @@ import (
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	baktypes "gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/bakctl/internal/utils"
+	"gitee.com/MM-Q/colorlib"
 	"gitee.com/MM-Q/comprx"
 	"gitee.com/MM-Q/comprx/types"
 	"gitee.com/MM-Q/go-kit/hash"
@@ -18,7 +19,14 @@ import (
 )
 
 // RunCmdMain run命令的主函数
-func RunCmdMain(db *sqlx.DB) error {
+//
+// 参数:
+//   - db: 数据库连接对象
+//   - cl: 颜色库对象
+//
+// 返回值:
+//   - error: 如果执行过程中发生错误，则返回非 nil 错误信息；成功则返回 nil
+func RunCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 1. 参数校验
 	if err := validateFlags(); err != nil {
 		return fmt.Errorf("参数错误: %w", err)
@@ -31,13 +39,13 @@ func RunCmdMain(db *sqlx.DB) error {
 	}
 
 	// 3. 显示选中的任务信息
-	fmt.Printf("找到 %d 个任务:\n", len(tasks))
+	cl.Whitef("找到 %d 个任务:\n", len(tasks))
 	for i, task := range tasks {
-		fmt.Printf("  %d. %s (ID: %d) - %s\n", i+1, task.Name, task.ID, task.BackupDir)
+		cl.Whitef("  %d. %s (ID: %d) - %s\n", i+1, task.Name, task.ID, task.BackupDir)
 	}
 
 	// 4. 执行选中的任务
-	if err := executeTasks(tasks, db); err != nil {
+	if err := executeTasks(tasks, db, cl); err != nil {
 		return fmt.Errorf("任务执行失败: %w", err)
 	}
 
@@ -49,10 +57,11 @@ func RunCmdMain(db *sqlx.DB) error {
 // 参数：
 //   - task：要执行的备份任务
 //   - db：数据库连接对象
+//   - cl: 颜色库对象
 //
 // 返回值：
 //   - error：如果执行过程中发生错误，则返回非 nil 错误信息；成功则返回 nil
-func executeTask(task baktypes.BackupTask, db *sqlx.DB) error {
+func executeTask(task baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 初始化结果结构体
 	result := &baktypes.BackupResult{
 		Success:    false,                    // 备份是否成功
@@ -63,7 +72,7 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB) error {
 	defer func() {
 		if recordErr := recordBackupResult(db, task, result); recordErr != nil {
 			// 记录失败的处理（可以记录日志等）
-			fmt.Printf("记录备份结果失败: %v\n", recordErr)
+			cl.Redf("记录备份结果失败: %v\n", recordErr)
 		}
 	}()
 
@@ -134,29 +143,30 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB) error {
 // 参数：
 //   - tasks：要执行的备份任务切片
 //   - db：数据库连接对象
+//   - cl: 颜色库对象
 //
 // 返回值：
 //   - error：如果执行过程中发生错误，则返回非 nil 错误信息；全部成功则返回 nil
-func executeTasks(tasks []baktypes.BackupTask, db *sqlx.DB) error {
+func executeTasks(tasks []baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) error {
 	successCount := 0 // 成功数量
 	failureCount := 0 // 失败数量
 
-	fmt.Printf("开始执行 %d 个备份任务...\n", len(tasks))
+	cl.Whitef("开始执行 %d 个备份任务...\n", len(tasks))
 
 	for i, task := range tasks {
 		fmt.Printf("[%d/%d] 正在执行任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
 
-		if err := executeTask(task, db); err != nil {
-			fmt.Printf("❌ 任务执行失败: %v\n", err)
+		if err := executeTask(task, db, cl); err != nil {
+			cl.Redf("任务执行失败: %v\n", err)
 			failureCount++
 		} else {
-			fmt.Print("✅ 任务执行成功\n")
+			cl.Green("任务执行成功")
 			successCount++
 		}
 	}
 
 	// 显示执行结果统计
-	fmt.Printf("执行完成！成功: %d, 失败: %d\n", successCount, failureCount)
+	cl.Whitef("执行完成！成功: %d, 失败: %d\n", successCount, failureCount)
 
 	if failureCount > 0 {
 		return fmt.Errorf("有 %d 个任务执行失败", failureCount)

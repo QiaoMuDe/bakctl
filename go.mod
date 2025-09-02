@@ -3,6 +3,7 @@ module gitee.com/MM-Q/bakctl
 go 1.25.0
 
 require (
+	gitee.com/MM-Q/colorlib v1.3.0
 	gitee.com/MM-Q/comprx v0.1.3
 	gitee.com/MM-Q/go-kit v0.0.4
 	gitee.com/MM-Q/qflag v0.2.3

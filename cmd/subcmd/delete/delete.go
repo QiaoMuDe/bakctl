@@ -8,6 +8,7 @@ import (
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/colorlib"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -33,7 +34,14 @@ type DeleteSummary struct {
 }
 
 // DeleteCmdMain delete命令的主函数
-func DeleteCmdMain(db *sqlx.DB) error {
+//
+// 参数:
+//   - db: 数据库连接
+//   - cl: 颜色库
+//
+// 返回:
+//   - error: 执行过程中发生的错误
+func DeleteCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 验证参数
 	if err := validateFlags(); err != nil {
 		return fmt.Errorf("参数错误: %w", err)
@@ -45,13 +53,14 @@ func DeleteCmdMain(db *sqlx.DB) error {
 		return fmt.Errorf("任务ID解析失败: %w", err)
 	}
 
+	// 获取任务列表
 	tasks, err := DB.GetTasksByIDs(db, taskIDs)
 	if err != nil {
 		return fmt.Errorf("查找任务失败: %w", err)
 	}
 
 	// 用户确认
-	confirmed, err := confirmDeletion(db, tasks, keepFilesF.Get())
+	confirmed, err := confirmDeletion(db, tasks, keepFilesF.Get(), cl)
 	if err != nil {
 		return fmt.Errorf("确认操作失败: %w", err)
 	}
@@ -61,41 +70,15 @@ func DeleteCmdMain(db *sqlx.DB) error {
 	}
 
 	// 执行删除
-	summary, err := deleteTasks(db, tasks)
+	summary, err := deleteTasks(db, tasks, cl)
 	if err != nil {
 		return fmt.Errorf("执行删除操作失败: %w", err)
 	}
 
 	// 打印结果汇总
-	printSummary(summary)
+	printSummary(summary, cl)
 
 	return nil
-}
-
-// deleteFileOrDir 根据文件类型选择合适的删除方法
-//
-// 参数:
-//   - path: 文件或目录路径
-//
-// 返回:
-//   - error: 删除失败时返回错误信息
-func deleteFileOrDir(path string) error {
-	// 获取文件信息
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // 文件已经不存在，认为删除成功
-		}
-		return err
-	}
-
-	// 是文件，直接删除
-	if !info.IsDir() {
-		return os.Remove(path)
-	}
-
-	// 是目录，直接使用 RemoveAll（能处理空目录和非空目录）
-	return os.RemoveAll(path)
 }
 
 // parseTaskID 解析单个任务ID
@@ -167,16 +150,17 @@ func getTaskIDs() ([]int64, error) {
 //   - db: 数据库连接
 //   - tasks: 要删除的任务列表
 //   - keepFiles: 是否保留备份文件
+//   - cl: 颜色库
 //
 // 返回:
 //   - bool: 用户是否确认删除
 //   - error: 确认失败时返回错误信息
-func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (bool, error) {
+func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool, cl *colorlib.ColorLib) (bool, error) {
 	if forceF.Get() {
 		return true, nil
 	}
 
-	fmt.Println("即将删除以下备份任务：")
+	cl.White("即将删除以下备份任务: ")
 	fmt.Println()
 
 	// 批量获取所有任务的备份记录
@@ -195,11 +179,10 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (boo
 			fileCount = 0
 		}
 
-		fmt.Printf("任务ID: %d, 名称: \"%s\", 备份记录: %d个",
-			task.ID, task.Name, len(records))
+		cl.Whitef("任务ID: %d, 名称: '%s', 备份记录: %d个", task.ID, task.Name, len(records))
 
 		if !keepFiles {
-			fmt.Printf(", 预计删除文件: %d个", fileCount)
+			cl.Whitef(", 预计删除文件: %d个", fileCount)
 		}
 		fmt.Println()
 
@@ -208,26 +191,26 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (boo
 	}
 
 	fmt.Println()
-	fmt.Printf("总计: %d个任务, %d个备份记录", len(tasks), totalRecords)
+	cl.Whitef("总计: %d个任务, %d个备份记录", len(tasks), totalRecords)
 	if !keepFiles {
-		fmt.Printf(", %d个备份文件", totalFiles)
+		cl.Whitef(", %d个备份文件", totalFiles)
 	}
 	fmt.Println()
 	fmt.Println()
 
 	if !keepFiles {
-		fmt.Println("警告: 此操作不可逆！备份文件将被永久删除。")
+		cl.Red("警告: 此操作不可逆！备份文件将被永久删除。")
 	} else {
-		fmt.Println("注意: 只删除数据库记录，备份文件将被保留。")
+		cl.Yellow("注意: 只删除数据库记录，备份文件将被保留。")
 	}
 	fmt.Println()
 
-	fmt.Print("确认删除? (输入 y 或 yes 确认，其他任意键取消): ")
+	cl.White("确认删除? (输入 y 或 yes 确认，其他任意键取消): ")
 
 	var response string
 	_, err = fmt.Scanln(&response)
 	if err != nil {
-		fmt.Println("输入读取失败，操作已取消")
+		cl.White("操作已取消")
 		return false, nil // 默认为不确认
 	}
 
@@ -235,7 +218,7 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (boo
 	confirmed := response == "y" || response == "yes"
 
 	if !confirmed {
-		fmt.Println("操作已取消")
+		cl.White("操作已取消")
 	}
 
 	return confirmed, nil
@@ -246,22 +229,24 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool) (boo
 // 参数:
 //   - db: 数据库连接
 //   - tasks: 要删除的任务列表
+//   - cl: 颜色库
 //
 // 返回:
 //   - DeleteSummary: 删除结果摘要
 //   - error: 删除失败时返回错误信息
-func deleteTasks(db *sqlx.DB, tasks []types.BackupTask) (DeleteSummary, error) {
+func deleteTasks(db *sqlx.DB, tasks []types.BackupTask, cl *colorlib.ColorLib) (DeleteSummary, error) {
 	// 初始化结果
 	summary := DeleteSummary{
 		TotalTasks: len(tasks),
 		Results:    make([]DeleteResult, 0, len(tasks)),
 	}
 
-	// 删除任务
+	// 遍历任务列表
 	for i, task := range tasks {
-		fmt.Printf("[%d/%d] 正在删除任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
+		cl.Whitef("[%d/%d] 正在删除任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
 
-		result := deleteTask(db, task)
+		// 删除单个任务
+		result := deleteTask(db, task, cl)
 		summary.Results = append(summary.Results, result)
 
 		if result.Success {
@@ -281,10 +266,11 @@ func deleteTasks(db *sqlx.DB, tasks []types.BackupTask) (DeleteSummary, error) {
 // 参数:
 //   - db: 数据库连接
 //   - task: 要删除的任务
+//   - cl: 颜色库
 //
 // 返回:
 //   - DeleteResult: 删除结果
-func deleteTask(db *sqlx.DB, task types.BackupTask) DeleteResult {
+func deleteTask(db *sqlx.DB, task types.BackupTask, cl *colorlib.ColorLib) DeleteResult {
 	result := DeleteResult{
 		TaskID:   int(task.ID),
 		TaskName: task.Name,
@@ -306,16 +292,16 @@ func deleteTask(db *sqlx.DB, task types.BackupTask) DeleteResult {
 
 		if err != nil {
 			// 文件删除失败不影响数据库操作，只记录错误
-			fmt.Printf("  ⚠ 部分文件删除失败: %v\n", err)
+			cl.Redf("部分文件删除失败: %v\n", err)
 		}
 
 		if err == nil {
-			fmt.Printf("  ✓ 删除备份文件: %d个\n", deleted)
+			cl.Whitef("删除备份文件: %d个\n", deleted)
 		} else {
-			fmt.Printf("  ✗ 删除备份文件失败\n")
+			cl.Red("删除备份文件失败")
 		}
 	} else {
-		fmt.Printf("  ✓ 跳过文件删除: 0个\n")
+		cl.White("跳过文件删除: 0个")
 	}
 
 	// 删除备份记录
@@ -325,7 +311,7 @@ func deleteTask(db *sqlx.DB, task types.BackupTask) DeleteResult {
 		return result
 	}
 	result.RecordsDeleted = recordsDeleted
-	fmt.Printf("  ✓ 删除备份记录: %d个\n", recordsDeleted)
+	cl.Whitef("删除备份记录: %d个\n", recordsDeleted)
 
 	// 删除备份任务
 	err = DB.DeleteBackupTask(db, task.ID)
@@ -333,7 +319,7 @@ func deleteTask(db *sqlx.DB, task types.BackupTask) DeleteResult {
 		result.ErrorMsg = fmt.Sprintf("删除备份任务失败: %v", err)
 		return result
 	}
-	fmt.Printf("  ✓ 删除任务配置: 1个\n")
+	cl.White("删除任务配置: 1个")
 
 	result.Success = true
 	return result
@@ -364,8 +350,8 @@ func deleteBackupFiles(records []types.BackupRecord) (int, int, error) {
 			continue
 		}
 
-		// 删除文件或目录
-		err := deleteFileOrDir(record.StoragePath)
+		// 删除项
+		err := os.RemoveAll(record.StoragePath)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("删除文件 %s 失败: %v", record.StoragePath, err))
 			skipped++
@@ -387,15 +373,16 @@ func deleteBackupFiles(records []types.BackupRecord) (int, int, error) {
 //
 // 参数:
 //   - summary: 删除结果摘要
-func printSummary(summary DeleteSummary) {
+//   - cl: 颜色库
+func printSummary(summary DeleteSummary, cl *colorlib.ColorLib) {
 	fmt.Println()
-	fmt.Printf("删除完成！成功: %d个任务, 失败: %d个任务\n", summary.SuccessTasks, summary.FailedTasks)
+	cl.Greenf("删除完成！成功: %d个任务, 失败: %d个任务\n", summary.SuccessTasks, summary.FailedTasks)
 
 	if summary.FailedTasks > 0 {
-		fmt.Println("\n失败详情:")
+		cl.Red("\n失败详情:")
 		for _, result := range summary.Results {
 			if !result.Success {
-				fmt.Printf("  任务ID %d (%s): %s\n", result.TaskID, result.TaskName, result.ErrorMsg)
+				cl.Redf("  任务ID %d (%s): %s\n", result.TaskID, result.TaskName, result.ErrorMsg)
 			}
 		}
 	}
