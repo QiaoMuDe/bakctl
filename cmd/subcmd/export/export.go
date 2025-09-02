@@ -61,6 +61,11 @@ func validateAllParameters() error {
 		return fmt.Errorf("--cmd/-c 和 --script/-s 不能同时使用")
 	}
 
+	// 检查是否没有指定导出模式
+	if !hasCmd && !hasScript {
+		return fmt.Errorf("请指定导出模式: --cmd/-c 或 --script/-s")
+	}
+
 	// 2. 验证任务选择参数
 	hasID := idF.Get() > 0
 	hasIDs := len(idsF.Get()) > 0
@@ -311,7 +316,7 @@ func printWindowsBatScript(tasks []types.BackupTask) error {
 
 	// 打印每个任务的执行命令
 	for _, task := range tasks {
-		fmt.Printf("start %s run --id %d\n", programName, task.ID)
+		fmt.Printf("start %s run -id %d\n", programName, task.ID)
 	}
 
 	return nil
@@ -337,7 +342,7 @@ func printLinuxBashScript(tasks []types.BackupTask) error {
 
 	// 打印每个任务的执行命令和进程ID保存
 	for _, task := range tasks {
-		fmt.Printf("( %s run --id %d ) &\n", programName, task.ID)
+		fmt.Printf("( %s run -id %d ) &\n", programName, task.ID)
 		fmt.Printf("pid%d=$!\n", task.ID)
 	}
 
