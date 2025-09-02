@@ -3,7 +3,6 @@ package db
 import (
 	"fmt"
 
-	"gitee.com/MM-Q/bakctl/internal/types"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -58,31 +57,4 @@ func DeleteBackupTask(db *sqlx.DB, taskID int64) error {
 	}
 
 	return nil
-}
-
-// GetBackupRecordsByTaskID 根据任务ID获取所有备份记录
-//
-// 参数：
-//   - db：数据库连接对象
-//   - taskID：任务ID
-//
-// 返回值：
-//   - []types.BackupRecord：备份记录列表
-//   - error：查询过程中的错误
-func GetBackupRecordsByTaskID(db *sqlx.DB, taskID int64) ([]types.BackupRecord, error) {
-	query := `
-		SELECT task_id, task_name, version_id, backup_filename, backup_size,
-		       storage_path, status, failure_message, checksum, created_at
-		FROM backup_records 
-		WHERE task_id = ?
-		ORDER BY created_at DESC
-	`
-
-	var records []types.BackupRecord
-	err := db.Select(&records, query, taskID)
-	if err != nil {
-		return nil, fmt.Errorf("查询备份记录失败: %w", err)
-	}
-
-	return records, nil
 }

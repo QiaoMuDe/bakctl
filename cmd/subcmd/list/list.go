@@ -23,7 +23,7 @@ func ListCmdMain(db *sqlx.DB) error {
 	}
 
 	// 查询任务列表
-	data, err := DB.GetAllBackupTasks(db)
+	data, err := DB.GetAllTasks(db)
 	if err != nil {
 		return fmt.Errorf("查询任务列表失败: %w", err)
 	}

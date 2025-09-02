@@ -8,40 +8,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// queryGetAllBackupTasks SQL SELECT 语句，用于查询所有备份任务
-const queryGetAllBackupTasks = `
-	SELECT
-		ID,
-		name,
-		retain_count,
-		retain_days,
-		backup_dir,
-		storage_dir,
-		compress,
-		include_rules,
-		exclude_rules,
-		max_file_size,
-		min_file_size
-	FROM backup_tasks
-`
-
-// GetAllBackupTasks 从数据库中获取所有备份任务。
-//
-// 参数：
-//   - db：数据库连接对象
-//
-// 返回值：
-//   - []types.BackupTask：所有备份任务的切片
-//   - error：如果获取过程中发生错误，则返回非 nil 错误信息
-func GetAllBackupTasks(db *sqlx.DB) ([]types.BackupTask, error) {
-	var tasks []types.BackupTask
-	err := db.Select(&tasks, queryGetAllBackupTasks)
-	if err != nil {
-		return nil, fmt.Errorf("获取所有备份任务失败: %w", err)
-	}
-	return tasks, nil
-}
-
 // TaskExists 检查指定ID的任务是否存在
 //
 // 参数：
@@ -292,4 +258,31 @@ func GetAllTasks(db *sqlx.DB) ([]types.BackupTask, error) {
 	}
 
 	return tasks, nil
+}
+
+// GetBackupRecordsByTaskID 根据任务ID获取所有备份记录
+//
+// 参数：
+//   - db：数据库连接对象
+//   - taskID：任务ID
+//
+// 返回值：
+//   - []types.BackupRecord：备份记录列表
+//   - error：查询过程中的错误
+func GetBackupRecordsByTaskID(db *sqlx.DB, taskID int64) ([]types.BackupRecord, error) {
+	query := `
+		SELECT task_id, task_name, version_id, backup_filename, backup_size,
+		       storage_path, status, failure_message, checksum, created_at
+		FROM backup_records 
+		WHERE task_id = ?
+		ORDER BY created_at DESC
+	`
+
+	var records []types.BackupRecord
+	err := db.Select(&records, query, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("查询备份记录失败: %w", err)
+	}
+
+	return records, nil
 }
