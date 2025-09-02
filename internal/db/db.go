@@ -211,8 +211,8 @@ func InsertAddTaskConfig(db *sqlx.DB, cfg *types.AddTaskConfig) error {
 		storageDir = types.BackupDirPath
 	}
 
-	// 构建实际存储目录：存储目录 + 备份源目录的目录名
-	actualStorageDir := filepath.Join(storageDir, filepath.Base(cfg.BackupDir))
+	// 构建实际存储目录：存储目录 + 任务名称
+	actualStorageDir := filepath.Join(storageDir, cfg.Name)
 
 	// 将 AddTaskConfig 转换为 BackupTask, 处理规则字段的 JSON 编码
 	backupTask := types.BackupTask{
