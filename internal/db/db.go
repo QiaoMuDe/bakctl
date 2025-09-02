@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS backup_records (
     version_id TEXT NOT NULL UNIQUE,          -- 备份版本ID，唯一且非空
     backup_filename TEXT NOT NULL,            -- 备份文件名，非空
     backup_size INTEGER NOT NULL,             -- 备份文件大小 (字节)，非空
-    status BOOLEAN NOT NULL,                  -- 备份状态(true/false)，非空
+    status BOOLEAN NOT NULL,                  -- 备份状态(1:true/0:false)，非空
     failure_message TEXT,                     -- 备份失败时的错误信息
     checksum TEXT,                            -- 备份文件校验码
     storage_path TEXT NOT NULL,               -- 备份文件存放路径，非空

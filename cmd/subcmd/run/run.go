@@ -95,7 +95,7 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB) error {
 	// 5. 构建压缩配置
 	opts := comprx.Options{
 		CompressionLevel:      level,                    // 压缩等级
-		OverwriteExisting:     true,                     // 覆盖已存在的文件
+		OverwriteExisting:     false,                    // 覆盖已存在的文件
 		ProgressEnabled:       true,                     // 显示进度条
 		ProgressStyle:         types.ProgressStyleASCII, // 进度条样式
 		DisablePathValidation: false,                    // 禁用路径验证

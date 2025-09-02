@@ -11,6 +11,7 @@ import (
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/export"
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/list"
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/log"
+	"gitee.com/MM-Q/bakctl/cmd/subcmd/restore"
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/run"
 	"gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
@@ -51,8 +52,11 @@ func main() {
 	// 获取export命令
 	exportCmd := export.InitExportCmd()
 
+	// 获取restore命令
+	restoreCmd := restore.InitRestoreCmd()
+
 	// 注册子命令
-	if err := qflag.AddSubCmd(addCmd, editCmd, listCmd, logCmd, runCmd, deleteCmd, exportCmd); err != nil {
+	if err := qflag.AddSubCmd(addCmd, editCmd, listCmd, logCmd, runCmd, deleteCmd, exportCmd, restoreCmd); err != nil {
 		fmt.Printf("err: %v\n", err)
 		os.Exit(1)
 	}
@@ -124,6 +128,13 @@ func main() {
 
 	case exportCmd.LongName(), exportCmd.ShortName(): // export 命令
 		if err := export.ExportCmdMain(db); err != nil {
+			fmt.Printf("err: %v\n", err)
+			os.Exit(1)
+		}
+		return
+
+	case restoreCmd.LongName(), restoreCmd.ShortName(): // restore 命令
+		if err := restore.RestoreCmdMain(db); err != nil {
 			fmt.Printf("err: %v\n", err)
 			os.Exit(1)
 		}

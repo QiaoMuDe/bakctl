@@ -1,267 +1,129 @@
 package restore
 
-// import (
-// 	"bufio"
-// 	"fmt"
-// 	"os"
-// 	"path/filepath"
-// 	"strings"
-// 	"time"
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
 
-// 	"gitee.com/MM-Q/bakctl/internal/db"
-// 	"gitee.com/MM-Q/bakctl/internal/types"
-// 	"gitee.com/MM-Q/bakctl/internal/utils"
-// 	"github.com/jmoiron/sqlx"
-// )
+	baktypes "gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/comprx"
+	"gitee.com/MM-Q/comprx/types"
+	"github.com/jmoiron/sqlx"
+)
 
-// // RestoreResult 恢复结果
-// type RestoreResult struct {
-// 	TaskID           int    `json:"task_id"`
-// 	TaskName         string `json:"task_name"`
-// 	VersionID        string `json:"version_id"`
-// 	TargetDirectory  string `json:"target_directory"`
-// 	FilesRestored    int    `json:"files_restored"`
-// 	FilesSkipped     int    `json:"files_skipped"`
-// 	FilesOverwritten int    `json:"files_overwritten"`
-// 	TotalSize        int64  `json:"total_size"`
-// 	Duration         string `json:"duration"`
-// 	Success          bool   `json:"success"`
-// 	ErrorMsg         string `json:"error_msg,omitempty"`
-// }
+// RestoreCmdMain restore命令的主函数
+func RestoreCmdMain(database *sqlx.DB) error {
+	startTime := time.Now()
 
-// // RestoreOptions 恢复选项
-// type RestoreOptions struct {
-// 	TaskID    int    `json:"task_id"`
-// 	VersionID string `json:"version_id"`
-// 	TargetDir string `json:"target_dir"`
-// }
+	// 1. 检查 -id 和 -vid 是否为空，必须都不为空
+	taskID := taskIDFlag.Get()
+	versionID := versionIDFlag.Get()
+	targetDir := targetDirFlag.Get()
 
-// // RestoreCmdMain restore命令的主函数
-// func RestoreCmdMain(database *sqlx.DB) error {
-// 	startTime := time.Now()
+	if taskID <= 0 {
+		return fmt.Errorf("任务ID必须大于0，请使用 --id 指定")
+	}
 
-// 	// 1. 验证参数
-// 	if err := validateFlags(); err != nil {
-// 		return fmt.Errorf("参数验证失败: %w", err)
-// 	}
+	if versionID == "" {
+		return fmt.Errorf("版本ID不能为空，请使用 --vid 指定")
+	}
 
-// 	taskID := taskIDFlag.Get()
-// 	versionID := versionIDFlag.Get()
-// 	targetDir := targetDirFlag.Get()
+	fmt.Printf("开始恢复备份...\n")
+	fmt.Printf("任务ID: %d\n", taskID)
+	fmt.Printf("版本ID: %s\n", versionID)
+	fmt.Printf("目标目录: %s\n", targetDir)
 
-// 	fmt.Printf("开始恢复备份...\n")
-// 	fmt.Printf("任务ID: %d\n", taskID)
-// 	fmt.Printf("版本ID: %s\n", versionID)
-// 	fmt.Printf("目标目录: %s\n", targetDir)
+	// 2. 检查指定的任务ID是否存在
+	fmt.Printf("  → 检查任务是否存在...\n")
+	if !taskExists(database, int64(taskID)) {
+		return fmt.Errorf("任务ID %d 不存在", taskID)
+	}
 
-// 	// 2. 查询备份记录
-// 	fmt.Printf("  → 查询备份记录...\n")
-// 	record, err := getBackupRecord(database, taskID, versionID)
-// 	if err != nil {
-// 		return fmt.Errorf("查询备份记录失败: %w", err)
-// 	}
+	// 3. 检查指定的vid是否存在并且是这个任务ID的
+	fmt.Printf("  → 检查备份记录...\n")
+	record, err := getBackupRecord(database, int64(taskID), versionID)
+	if err != nil {
+		return err
+	}
 
-// 	// 3. 查询备份任务
-// 	fmt.Printf("  → 查询备份任务配置...\n")
-// 	task, err := getBackupTask(database, taskID)
-// 	if err != nil {
-// 		return fmt.Errorf("查询备份任务失败: %w", err)
-// 	}
+	// 4. 检查备份文件是否存在
+	fmt.Printf("  → 验证备份文件...\n")
+	if _, err := os.Stat(record.StoragePath); os.IsNotExist(err) {
+		return fmt.Errorf("备份文件不存在: %s", record.StoragePath)
+	}
 
-// 	// 4. 验证备份文件
-// 	fmt.Printf("  → 验证备份文件完整性...\n")
-// 	if err := verifyBackupFile(record); err != nil {
-// 		return fmt.Errorf("备份文件验证失败: %w", err)
-// 	}
+	// 5. 创建目标目录
+	fmt.Printf("  → 准备目标目录...\n")
+	absTargetDir, err := filepath.Abs(targetDir)
+	if err != nil {
+		return fmt.Errorf("无法获取目标目录的绝对路径: %w", err)
+	}
 
-// 	// 7. 显示恢复确认信息
-// 	if !showRestoreConfirmation(record, task, targetDir) {
-// 		fmt.Println("用户取消恢复操作")
-// 		return nil
-// 	}
+	// 6. 根据任务记录里的备份存储地址，解压到-d指定的路径
+	fmt.Printf("  → 正在恢复备份文件...\n")
+	if err := extractBackupFile(record.StoragePath, absTargetDir); err != nil {
+		return fmt.Errorf("恢复失败: %w", err)
+	}
 
-// 	// 8. 执行恢复
-// 	fmt.Printf("  → 正在恢复备份文件...\n")
-// 	result, err := restoreBackup(record, task, targetDir)
-// 	if err != nil {
-// 		return fmt.Errorf("恢复失败: %w", err)
-// 	}
+	// 7. 显示结果
+	duration := time.Since(startTime)
+	fmt.Printf("恢复完成！\n")
+	fmt.Printf("耗时: %v\n", duration)
+	fmt.Printf("备份文件: %s\n", record.StoragePath)
+	fmt.Printf("目标目录: %s\n", absTargetDir)
 
-// 	// 9. 显示结果
-// 	result.Duration = time.Since(startTime).String()
-// 	showRestoreResult(result)
+	return nil
+}
 
-// 	return nil
-// }
+// taskExists 检查任务ID是否存在
+func taskExists(database *sqlx.DB, taskID int64) bool {
+	var count int
+	query := `SELECT COUNT(*) FROM backup_tasks WHERE ID = ?`
+	err := database.Get(&count, query, taskID)
+	return err == nil && count > 0
+}
 
-// // validateFlags 验证命令行参数
-// func validateFlags() error {
-// 	if taskIDFlag.Get() <= 0 {
-// 		return fmt.Errorf("任务ID必须大于0")
-// 	}
+// getBackupRecord 根据任务ID和版本ID获取备份记录
+func getBackupRecord(database *sqlx.DB, taskID int64, versionID string) (*baktypes.BackupRecord, error) {
+	query := `
+		SELECT task_id, task_name, version_id, backup_filename, backup_size, 
+		       storage_path, status, failure_message, checksum, created_at
+		FROM backup_records 
+		WHERE task_id = ? AND version_id = ? AND status = 1
+	`
 
-// 	if versionIDFlag.Get() == "" {
-// 		return fmt.Errorf("版本ID不能为空")
-// 	}
+	var record baktypes.BackupRecord
+	err := database.Get(&record, query, taskID, versionID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("未找到指定的备份记录 (任务ID: %d, 版本ID: %s)", taskID, versionID)
+		}
 
-// 	targetDir := targetDirFlag.Get()
-// 	if targetDir == "" {
-// 		return fmt.Errorf("目标目录不能为空")
-// 	}
+		return nil, fmt.Errorf("查询备份记录失败: %w", err)
+	}
 
-// 	// 转换为绝对路径
-// 	absPath, err := filepath.Abs(targetDir)
-// 	if err != nil {
-// 		return fmt.Errorf("无法获取目标目录的绝对路径: %w", err)
-// 	}
-// 	targetDirFlag.Set(absPath)
+	return &record, nil
+}
 
-// 	return nil
-// }
+// extractBackupFile 解压备份文件到目标目录
+func extractBackupFile(backupPath, targetDir string) error {
+	fmt.Printf("    正在解压缩: %s -> %s\n", backupPath, targetDir)
 
-// // getBackupRecord 根据任务ID和版本ID获取备份记录
-// func getBackupRecord(database *sqlx.DB, taskID int, versionID string) (*types.BackupRecord, error) {
-// 	record, err := db.GetBackupRecordByTaskAndVersion(database, taskID, versionID)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("未找到指定的备份记录 (任务ID: %d, 版本ID: %s): %w", taskID, versionID, err)
-// 	}
-// 	return record, nil
-// }
+	// 5. 构建压缩配置
+	opts := comprx.Options{
+		CompressionLevel:      types.CompressionLevelDefault, // 压缩等级默认
+		OverwriteExisting:     false,                         // 覆盖已存在的文件
+		ProgressEnabled:       true,                          // 显示进度条
+		ProgressStyle:         types.ProgressStyleASCII,      // 进度条样式
+		DisablePathValidation: false,                         // 禁用路径验证
+	}
 
-// // getBackupTask 获取备份任务信息
-// func getBackupTask(database *sqlx.DB, taskID int) (*types.BackupTask, error) {
-// 	task, err := db.GetBackupTaskByID(database, taskID)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("未找到指定的备份任务 (ID: %d): %w", taskID, err)
-// 	}
-// 	return task, nil
-// }
+	// 6. 执行备份操作
+	if err := comprx.PackOptions(backupPath, targetDir, opts); err != nil {
+		return fmt.Errorf("解压失败: %w", err)
+	}
 
-// // verifyBackupFile 验证备份文件完整性
-// func verifyBackupFile(record *types.BackupRecord) error {
-// 	// 检查文件是否存在
-// 	if _, err := os.Stat(record.StoragePath); os.IsNotExist(err) {
-// 		return fmt.Errorf("备份文件不存在: %s", record.StoragePath)
-// 	}
-
-// 	// 检查文件大小
-// 	fileInfo, err := os.Stat(record.StoragePath)
-// 	if err != nil {
-// 		return fmt.Errorf("无法获取备份文件信息: %w", err)
-// 	}
-
-// 	if fileInfo.Size() != record.BackupSize {
-// 		return fmt.Errorf("备份文件大小不匹配 (期望: %d, 实际: %d)", record.BackupSize, fileInfo.Size())
-// 	}
-
-// 	return nil
-// }
-
-// // showRestoreConfirmation 显示恢复确认信息
-// func showRestoreConfirmation(record *types.BackupRecord, task *types.BackupTask, targetDir string) bool {
-// 	fmt.Printf("\n即将恢复以下备份：\n\n")
-// 	fmt.Printf("任务ID: %d\n", record.TaskID)
-// 	fmt.Printf("任务名称: \"%s\"\n", task.TaskName)
-// 	fmt.Printf("版本ID: \"%s\"\n", record.VersionID)
-// 	fmt.Printf("备份时间: %s\n", record.BackupTime.Format("2006-01-02 15:04:05"))
-// 	fmt.Printf("备份大小: %s\n", utils.FormatSize(record.BackupSize))
-// 	fmt.Printf("目标目录: %s\n", targetDir)
-// 	fmt.Printf("\n确认恢复? (y/N): ")
-
-// 	reader := bufio.NewReader(os.Stdin)
-// 	input, _ := reader.ReadString('\n')
-// 	input = strings.TrimSpace(strings.ToLower(input))
-
-// 	return input == "y" || input == "yes"
-// }
-
-// // restoreBackup 执行备份恢复
-// func restoreBackup(record *types.BackupRecord, task *types.BackupTask, targetDir string) (*RestoreResult, error) {
-// 	result := &RestoreResult{
-// 		TaskID:          record.TaskID,
-// 		TaskName:        task.TaskName,
-// 		VersionID:       record.VersionID,
-// 		TargetDirectory: targetDir,
-// 		Success:         false,
-// 	}
-
-// 	// 使用 comprx 库进行解压缩恢复
-// 	if err := extractBackupFile(record.StoragePath, targetDir, task); err != nil {
-// 		result.ErrorMsg = err.Error()
-// 		return result, fmt.Errorf("解压缩备份文件失败: %w", err)
-// 	}
-
-// 	// 统计恢复结果
-// 	if err := calculateRestoreStats(result, targetDir); err != nil {
-// 		fmt.Printf("警告: 无法统计恢复结果: %v\n", err)
-// 	}
-
-// 	result.Success = true
-// 	return result, nil
-// }
-
-// // extractBackupFile 使用comprx库解压缩备份文件
-// func extractBackupFile(backupPath, targetDir string, task *types.BackupTask) error {
-// 	// 这里应该使用 comprx.UnpackOptions，但由于我们没有看到 comprx 包的具体实现
-// 	// 我们先使用一个简化的实现，实际项目中需要替换为真正的 comprx 调用
-
-// 	// TODO: 替换为实际的 comprx.UnpackOptions 调用
-// 	// opts := buildRestoreOptions(task)
-// 	// return comprx.UnpackOptions(backupPath, targetDir, opts)
-
-// 	// 临时实现：这里需要根据实际的 comprx 库接口进行调用
-// 	fmt.Printf("    正在解压缩: %s -> %s\n", backupPath, targetDir)
-
-// 	// 检查备份文件格式并解压
-// 	// 这里应该调用 comprx 库的解压功能
-// 	// 暂时返回成功，实际实现时需要替换
-
-// 	return nil
-// }
-
-// // calculateRestoreStats 统计恢复结果
-// func calculateRestoreStats(result *RestoreResult, targetDir string) error {
-// 	var totalSize int64
-// 	var fileCount int
-
-// 	err := filepath.Walk(targetDir, func(path string, info os.FileInfo, err error) error {
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if !info.IsDir() {
-// 			totalSize += info.Size()
-// 			fileCount++
-// 		}
-// 		return nil
-// 	})
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	result.FilesRestored = fileCount
-// 	result.TotalSize = totalSize
-// 	return nil
-// }
-
-// // buildRestoreOptions 根据备份任务配置构建恢复选项
-// // 注意：这个函数需要根据实际的 comprx 库接口进行调整
-// /*
-// func buildRestoreOptions(task *types.BackupTask) comprx.Options {
-// 	// 构建过滤器（使用备份任务的配置）
-// 	filters := types.FilterOptions{
-// 		Include: task.IncludePatterns, // 包含规则
-// 		Exclude: task.ExcludePatterns, // 排除规则
-// 		MinSize: task.MinFileSize,     // 最小文件大小
-// 		MaxSize: task.MaxFileSize,     // 最大文件大小
-// 	}
-
-// 	return comprx.Options{
-// 		OverwriteExisting:     true,                     // 覆盖已存在文件
-// 		ProgressEnabled:       true,                     // 显示进度条
-// 		ProgressStyle:         types.ProgressStyleASCII, // ASCII进度条
-// 		DisablePathValidation: false,                    // 启用路径验证
-// 		Filter:                filters,                  // 使用备份任务的过滤器
-// 	}
-// }
-// */
+	return nil
+}
