@@ -26,8 +26,8 @@ func InitDeleteCmd() *cmd.Cmd {
 	deleteCmd.SetDescription("删除备份任务")
 
 	// 任务ID选择 (二选一)
-	idF = deleteCmd.Int64("id", "I", 0, "删除指定ID的单个备份任务")
-	idsF = deleteCmd.Slice("ids", "S", []string{}, "批量删除多个备份任务（逗号分隔）")
+	idF = deleteCmd.Int64("", "id", 0, "删除指定ID的单个备份任务")
+	idsF = deleteCmd.Slice("", "ids", []string{}, "批量删除多个备份任务（逗号分隔）")
 
 	// 删除选项
 	forceF = deleteCmd.Bool("force", "f", false, "强制删除，跳过确认提示")

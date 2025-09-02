@@ -19,7 +19,7 @@ var (
 // InitLogCmd 初始化日志命令
 func InitLogCmd() *cmd.Cmd {
 	logCmd = cmd.NewCmd("log", "lg", flag.ExitOnError)
-	logCmd.SetDescription("显示备份记录日志")
+	logCmd.SetDescription("查看备份记录日志")
 	logCmd.SetUseChinese(true)
 
 	// 添加标志

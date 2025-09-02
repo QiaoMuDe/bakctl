@@ -160,7 +160,7 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool, cl *
 		return true, nil
 	}
 
-	cl.White("即将删除以下备份任务: ")
+	cl.Blue("即将删除以下备份任务: ")
 	fmt.Println()
 
 	// 批量获取所有任务的备份记录
@@ -169,9 +169,10 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool, cl *
 		return false, fmt.Errorf("获取备份记录失败: %w", err)
 	}
 
-	totalRecords := 0
-	totalFiles := 0
+	totalRecords := 0 // 记录总数
+	totalFiles := 0   // 文件总数
 
+	// 遍历所有任务
 	for _, task := range tasks {
 		records := recordsByTask[task.ID]
 		fileCount := len(records)
@@ -191,9 +192,9 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool, cl *
 	}
 
 	fmt.Println()
-	cl.Whitef("总计: %d个任务, %d个备份记录", len(tasks), totalRecords)
+	cl.Bluef("总计: %d个任务, %d个备份记录", len(tasks), totalRecords)
 	if !keepFiles {
-		cl.Whitef(", %d个备份文件", totalFiles)
+		cl.Bluef(", %d个备份文件", totalFiles)
 	}
 	fmt.Println()
 	fmt.Println()
@@ -205,8 +206,9 @@ func confirmDeletion(db *sqlx.DB, tasks []types.BackupTask, keepFiles bool, cl *
 	}
 	fmt.Println()
 
-	cl.White("确认删除? (输入 y 或 yes 确认，其他任意键取消): ")
+	cl.Blue("确认删除? (输入 y 或 yes 确认，其他任意键取消): ")
 
+	// 读取用户输入
 	var response string
 	_, err = fmt.Scanln(&response)
 	if err != nil {
@@ -243,7 +245,7 @@ func deleteTasks(db *sqlx.DB, tasks []types.BackupTask, cl *colorlib.ColorLib) (
 
 	// 遍历任务列表
 	for i, task := range tasks {
-		cl.Whitef("[%d/%d] 正在删除任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
+		cl.Bluef("[%d/%d] 正在删除任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
 
 		// 删除单个任务
 		result := deleteTask(db, task, cl)

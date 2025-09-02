@@ -39,7 +39,7 @@ func RunCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	}
 
 	// 3. 显示选中的任务信息
-	cl.Whitef("找到 %d 个任务:\n", len(tasks))
+	cl.Bluef("找到 %d 个任务:\n", len(tasks))
 	for i, task := range tasks {
 		cl.Whitef("  %d. %s (ID: %d) - %s\n", i+1, task.Name, task.ID, task.BackupDir)
 	}
@@ -151,10 +151,10 @@ func executeTasks(tasks []baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLi
 	successCount := 0 // 成功数量
 	failureCount := 0 // 失败数量
 
-	cl.Whitef("开始执行 %d 个备份任务...\n", len(tasks))
+	cl.Bluef("开始执行 %d 个备份任务...\n", len(tasks))
 
 	for i, task := range tasks {
-		fmt.Printf("[%d/%d] 正在执行任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
+		cl.Whitef("[%d/%d] 正在执行任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
 
 		if err := executeTask(task, db, cl); err != nil {
 			cl.Redf("任务执行失败: %v\n", err)
@@ -166,7 +166,7 @@ func executeTasks(tasks []baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLi
 	}
 
 	// 显示执行结果统计
-	cl.Whitef("执行完成！成功: %d, 失败: %d\n", successCount, failureCount)
+	cl.Greenf("执行完成！成功: %d, 失败: %d\n", successCount, failureCount)
 
 	if failureCount > 0 {
 		return fmt.Errorf("有 %d 个任务执行失败", failureCount)
@@ -369,8 +369,9 @@ func selectTasks(db *sqlx.DB) ([]baktypes.BackupTask, error) {
 			return nil, fmt.Errorf("批量获取任务失败: %w", err)
 		}
 
+		// 检查任务列表是否为空
 		if len(tasks) == 0 {
-			return nil, fmt.Errorf("系统中没有配置任何备份任务")
+			return nil, fmt.Errorf("没有找到指定的任务ID")
 		}
 
 		return tasks, nil

@@ -238,7 +238,6 @@ func updateInt(currentVal, newVal, unsetVal int) int {
 //   - error: 解析失败时返回错误信息，否则返回 nil
 func updateBooleanFromFlag(currentValue bool, flagGetter func() string, paramName string) (bool, error) {
 	flagValue := flagGetter() // 获取标志的字符串值
-
 	if flagValue == "" {
 		return currentValue, nil // 如果标志值为空，表示用户未指定新值，则返回当前值
 	}

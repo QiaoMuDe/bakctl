@@ -22,9 +22,9 @@ func InitExportCmd() *cmd.Cmd {
 	exportCmd.SetDescription("导出备份任务的添加命令")
 
 	// 任务选择标志 (三选一)
-	idF = exportCmd.Int("id", "I", 0, "指定单个任务ID进行导出")
-	idsF = exportCmd.Slice("ids", "S", []string{}, "指定多个任务ID进行导出，用逗号分隔")
-	allF = exportCmd.Bool("all", "A", false, "导出所有任务")
+	idF = exportCmd.Int("", "id", 0, "指定单个任务ID进行导出")
+	idsF = exportCmd.Slice("", "ids", []string{}, "指定多个任务ID进行导出, 用逗号分隔")
+	allF = exportCmd.Bool("", "all", false, "导出所有任务")
 
 	return exportCmd
 }
