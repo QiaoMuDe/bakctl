@@ -14,6 +14,11 @@ import (
 //   - string: 编码后的 JSON 数组字符串
 //   - error: 编码过程中的错误（如果有）
 func MarshalRules(rules []string) (string, error) {
+	// 检查切片是否为空
+	if len(rules) == 0 {
+		return "[]", nil
+	}
+
 	jsonBytes, err := json.Marshal(rules)
 	if err != nil {
 		return "", err
@@ -31,6 +36,11 @@ func MarshalRules(rules []string) (string, error) {
 //   - []string: 解码后的字符串切片
 //   - error: 解码过程中的错误（如果有）
 func UnmarshalRules(jsonString string) ([]string, error) {
+	// 检查 JSON 字符串是否为空或只包含方括号
+	if jsonString == "" || jsonString == "[]" {
+		return []string{}, nil
+	}
+
 	var rules []string
 	err := json.Unmarshal([]byte(jsonString), &rules)
 	if err != nil {
