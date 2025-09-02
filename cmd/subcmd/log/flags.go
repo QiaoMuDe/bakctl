@@ -14,6 +14,7 @@ var (
 	logCmdTaskID     *qflag.IntFlag    // 任务ID标志
 	logCmdTaskName   *qflag.StringFlag // 任务名称标志
 	logCmdLimit      *qflag.IntFlag    // 限制条数标志
+	logCmdSimple     *qflag.BoolFlag   // 简化显示
 )
 
 // InitLogCmd 初始化日志命令
@@ -27,6 +28,7 @@ func InitLogCmd() *cmd.Cmd {
 	logCmdTaskID = logCmd.Int("id", "", 0, "指定任务ID来过滤备份记录")
 	logCmdTaskName = logCmd.String("name", "n", "", "指定任务名称来过滤备份记录")
 	logCmdLimit = logCmd.Int("limit", "l", 10, "限制显示的备份记录条数")
+	logCmdSimple = logCmd.Bool("simple", "s", false, "简化显示，只显示核心信息")
 
 	return logCmd
 }

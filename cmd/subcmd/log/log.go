@@ -14,6 +14,23 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// emptyToPlaceholder 如果字符串为空则返回占位符，否则返回原字符串
+//
+// 参数:
+//   - s: 输入字符串
+//
+// 返回值:
+//   - string: 返回处理后的字符串
+//
+// 说明:
+//   - 当输入字符串为空时，返回占位符 "---"；否则返回原字符串。
+func emptyToPlaceholder(s string) string {
+	if s == "" {
+		return "---"
+	}
+	return s
+}
+
 // LogCmdMain 日志命令主函数
 //
 // 参数:
@@ -54,55 +71,61 @@ func LogCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 使用标准输出作为输出目标
 	t.SetOutputMirror(os.Stdout)
 
-	// 设置表头
-	t.AppendHeader(table.Row{"任务ID", "任务名", "版本ID", "备份文件名", "文件大小", "存储路径", "状态", "失败信息", "校验码", "创建时间"})
+	// 根据简洁模式设置不同的表头和列配置
+	if logCmdSimple.Get() {
+		// 简洁模式：只显示任务ID、任务名、版本ID、状态、失败信息
+		t.AppendHeader(table.Row{"任务ID", "任务名", "版本ID", "状态", "失败信息"})
 
-	// 设置列配置
-	t.SetColumnConfigs([]table.ColumnConfig{
-		{Name: "任务ID", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
-		{Name: "任务名", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-		{Name: "版本ID", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-		{Name: "备份文件名", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-		{Name: "文件大小", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
-		{Name: "存储路径", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-		{Name: "状态", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
-		{Name: "失败信息", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-		{Name: "校验码", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-		{Name: "创建时间", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
-	})
-
-	// 添加数据行
-	for _, record := range data {
-		t.AppendRow(table.Row{
-			record.TaskID,    // 任务ID
-			record.TaskName,  // 任务名
-			record.VersionID, // 版本ID
-			func() string {
-				// 如果备份文件名不为空，则返回备份文件名，否则返回 "-"
-				if record.BackupFilename != "" {
-					return record.BackupFilename
-				}
-				return "---"
-			}(), // 备份文件名
-			utils.FormatBytes(record.BackupSize), // 文件大小
-			record.StoragePath,                   // 存储路径
-			record.Status,                        // 状态
-			func() string {
-				// 如果失败信息不为空，则返回失败信息，否则返回 "-"
-				if record.FailureMessage != "" {
-					return record.FailureMessage
-				}
-				return "---"
-			}(), // 失败信息
-			func() string {
-				// 如果校验码不为空，则返回校验码，否则返回 "-"
-				if record.Checksum != "" {
-					return record.Checksum
-				}
-				return "---"
-			}(), // 校验码
-			record.CreatedAt, // 创建时间
+		t.SetColumnConfigs([]table.ColumnConfig{
+			{Name: "任务ID", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
+			{Name: "任务名", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "版本ID", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "状态", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
+			{Name: "失败信息", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 		})
+
+		// 添加简洁模式数据行
+		for _, record := range data {
+			t.AppendRow(table.Row{
+				record.TaskID,    // 任务ID
+				record.TaskName,  // 任务名
+				record.VersionID, // 版本ID
+				record.Status,    // 状态
+				emptyToPlaceholder(record.FailureMessage), // 失败信息
+			})
+		}
+	} else {
+		// 完整模式：显示所有信息
+		t.AppendHeader(table.Row{"任务ID", "任务名", "版本ID", "备份文件名", "文件大小", "存储路径", "状态", "失败信息", "校验码", "创建时间"})
+
+		t.SetColumnConfigs([]table.ColumnConfig{
+			{Name: "任务ID", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
+			{Name: "任务名", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "版本ID", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "备份文件名", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "文件大小", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
+			{Name: "存储路径", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "状态", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
+			{Name: "失败信息", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "校验码", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "创建时间", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
+		})
+
+		// 添加完整模式数据行
+		for _, record := range data {
+			t.AppendRow(table.Row{
+				record.TaskID,    // 任务ID
+				record.TaskName,  // 任务名
+				record.VersionID, // 版本ID
+				emptyToPlaceholder(record.BackupFilename), // 备份文件名
+				utils.FormatBytes(record.BackupSize),      // 文件大小
+				record.StoragePath,                        // 存储路径
+				record.Status,                             // 状态
+				emptyToPlaceholder(record.FailureMessage), // 失败信息
+				emptyToPlaceholder(record.Checksum),       // 校验码
+				record.CreatedAt,                          // 创建时间
+			})
+		}
 	}
 
 	// 渲染表格
