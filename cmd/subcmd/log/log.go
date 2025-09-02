@@ -12,7 +12,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// LogCmdMain 日志命令主函数
 func LogCmdMain(db *sqlx.DB) error {
+	// 参数验证
+	if err := validateLogFlags(); err != nil {
+		return err
+	}
+
 	// 创建表格
 	t := table.NewWriter()
 
@@ -24,7 +30,7 @@ func LogCmdMain(db *sqlx.DB) error {
 	}
 
 	// 查询备份记录列表
-	data, err := DB.GetAllBackupRecords(db)
+	data, err := getBackupRecords(db)
 	if err != nil {
 		return fmt.Errorf("查询备份记录失败: %w", err)
 	}
@@ -93,4 +99,47 @@ func LogCmdMain(db *sqlx.DB) error {
 	t.Render()
 
 	return nil
+}
+
+// validateLogFlags 验证log命令的标志参数
+func validateLogFlags() error {
+	// 验证任务选择
+	hasID := logCmdTaskID.Get() > 0       // 任务ID必须大于0
+	hasName := logCmdTaskName.Get() != "" // 任务名称不能为空
+
+	if hasID && hasName {
+		return fmt.Errorf("--id 和 --name/-n 不能同时使用")
+	}
+
+	// 验证limit参数
+	if logCmdLimit.Get() < 0 {
+		return fmt.Errorf("--limit/-l 必须大于等于0")
+	}
+
+	return nil
+}
+
+// getBackupRecords 根据标志参数获取备份记录
+func getBackupRecords(db *sqlx.DB) ([]types.BackupRecord, error) {
+	taskID := logCmdTaskID.Get()     // 任务ID
+	taskName := logCmdTaskName.Get() // 任务名称
+	limit := logCmdLimit.Get()       // 限制条数
+
+	// 如果指定了任务ID
+	if taskID > 0 {
+		return DB.GetBackupRecordsByTaskIDWithLimit(db, int64(taskID), limit)
+	}
+
+	// 如果指定了任务名称
+	if taskName != "" {
+		// 先根据任务名称获取任务ID
+		id, err := DB.GetTaskIDByName(db, taskName)
+		if err != nil {
+			return nil, fmt.Errorf("根据任务名称获取任务ID失败: %w", err)
+		}
+		return DB.GetBackupRecordsByTaskIDWithLimit(db, id, limit)
+	}
+
+	// 默认获取所有备份记录
+	return DB.GetAllBackupRecordsWithLimit(db, limit)
 }

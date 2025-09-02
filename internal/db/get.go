@@ -87,6 +87,33 @@ func GetAllBackupRecords(db *sqlx.DB) ([]types.BackupRecord, error) {
 	return records, nil
 }
 
+// GetAllBackupRecordsWithLimit 从数据库中获取指定数量的备份记录。
+//
+// 参数：
+//   - db：数据库连接对象
+//   - limit：限制返回的记录数量，0表示不限制
+//
+// 返回值：
+//   - []types.BackupRecord：备份记录的切片
+//   - error：如果获取过程中发生错误，则返回非 nil 错误信息
+func GetAllBackupRecordsWithLimit(db *sqlx.DB, limit int) ([]types.BackupRecord, error) {
+	query := queryGetAllBackupRecords
+	var args []interface{}
+
+	// 如果指定了limit，添加LIMIT子句
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+
+	var records []types.BackupRecord
+	err := db.Select(&records, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("获取备份记录失败: %w", err)
+	}
+	return records, nil
+}
+
 // GetBatchBackupRecords 批量获取多个任务的备份记录
 //
 // 参数：
@@ -238,6 +265,40 @@ func GetTasksByIDs(db *sqlx.DB, taskIDs []int64) ([]types.BackupTask, error) {
 	}
 
 	return tasks, nil
+}
+
+// GetBackupRecordsByTaskIDWithLimit 根据任务ID获取指定数量的备份记录
+//
+// 参数：
+//   - db：数据库连接对象
+//   - taskID：任务ID
+//   - limit：限制返回的记录数量，0表示不限制
+//
+// 返回值：
+//   - []types.BackupRecord：备份记录列表
+//   - error：查询过程中的错误
+func GetBackupRecordsByTaskIDWithLimit(db *sqlx.DB, taskID int64, limit int) ([]types.BackupRecord, error) {
+	query := `
+		SELECT task_id, task_name, version_id, backup_filename, backup_size,storage_path, status, failure_message, checksum, created_at
+		FROM backup_records 
+		WHERE task_id = ?
+		ORDER BY created_at DESC
+	`
+	args := []interface{}{taskID}
+
+	// 如果指定了limit，添加LIMIT子句
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+
+	var records []types.BackupRecord
+	err := db.Select(&records, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("查询备份记录失败: %w", err)
+	}
+
+	return records, nil
 }
 
 // GetAllTasks 从数据库中获取所有任务信息。
