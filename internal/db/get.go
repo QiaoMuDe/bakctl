@@ -172,44 +172,6 @@ func GetBatchBackupRecords(db *sqlx.DB, tasks []types.BackupTask) (map[int64][]t
 	return recordsByTask, nil
 }
 
-// GetTasksByIDsInt 根据 int 类型的任务ID列表获取任务信息
-//
-// 参数：
-//   - db：数据库连接对象
-//   - taskIDs：int 类型的任务ID列表
-//
-// 返回值：
-//   - []types.BackupTask：任务列表
-//   - error：查询过程中的错误
-func GetTasksByIDsInt(db *sqlx.DB, taskIDs []int) ([]types.BackupTask, error) {
-	if len(taskIDs) == 0 {
-		return []types.BackupTask{}, nil
-	}
-
-	query := `
-		SELECT ID, name, retain_count, retain_days, backup_dir, storage_dir, 
-		       compress, include_rules, exclude_rules, max_file_size, min_file_size
-		FROM backup_tasks 
-		WHERE ID IN (?)
-		ORDER BY ID
-	`
-
-	// 使用 sqlx.In 构建 IN 查询
-	query, args, err := sqlx.In(query, taskIDs)
-	if err != nil {
-		return nil, fmt.Errorf("构建查询失败: %w", err)
-	}
-	query = db.Rebind(query)
-
-	var tasks []types.BackupTask
-	err = db.Select(&tasks, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("获取任务失败: %w", err)
-	}
-
-	return tasks, nil
-}
-
 // GetTaskIDByName 根据任务名称从数据库中获取任务ID。
 // 如果找到任务，返回任务ID和nil错误；如果未找到，返回0和sql.ErrNoRows错误。
 //
