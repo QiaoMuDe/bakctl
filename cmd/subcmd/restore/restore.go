@@ -120,8 +120,8 @@ func extractBackupFile(backupPath, targetDir string) error {
 		DisablePathValidation: false,                         // 禁用路径验证
 	}
 
-	// 6. 执行备份操作
-	if err := comprx.PackOptions(backupPath, targetDir, opts); err != nil {
+	// 6. 执行解压操作
+	if err := comprx.UnpackOptions(backupPath, targetDir, opts); err != nil {
 		return fmt.Errorf("解压失败: %w", err)
 	}
 
