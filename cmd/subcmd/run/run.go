@@ -159,6 +159,7 @@ func executeTasks(tasks []baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLi
 	successCount := 0 // 成功数量
 	failureCount := 0 // 失败数量
 
+	fmt.Println()
 	cl.Bluef("开始执行 %d 个备份任务...\n", len(tasks))
 
 	for i, task := range tasks {
