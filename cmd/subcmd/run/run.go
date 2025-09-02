@@ -174,6 +174,7 @@ func executeTasks(tasks []baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLi
 	}
 
 	// 显示执行结果统计
+	fmt.Println()
 	cl.Greenf("执行完成！成功: %d, 失败: %d\n", successCount, failureCount)
 
 	if failureCount > 0 {
