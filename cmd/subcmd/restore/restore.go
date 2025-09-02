@@ -10,6 +10,7 @@ import (
 	baktypes "gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/comprx"
 	"gitee.com/MM-Q/comprx/types"
+	"gitee.com/MM-Q/go-kit/hash"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -54,20 +55,35 @@ func RestoreCmdMain(database *sqlx.DB) error {
 		return fmt.Errorf("备份文件不存在: %s", record.StoragePath)
 	}
 
-	// 5. 创建目标目录
+	// 5. 验证备份文件校验值
+	if record.Checksum != "" {
+		fmt.Printf("  → 验证文件完整性...\n")
+		actualChecksum, err := hash.ChecksumProgress(record.StoragePath, baktypes.HashAlgorithm)
+		if err != nil {
+			return fmt.Errorf("计算备份文件校验值失败: %w", err)
+		}
+		if actualChecksum != record.Checksum {
+			return fmt.Errorf("备份文件校验失败，文件可能已损坏或被篡改\n期望: %s\n实际: %s", record.Checksum, actualChecksum)
+		}
+		fmt.Printf("    ✓ 文件完整性验证通过\n")
+	} else {
+		fmt.Printf("    ⚠ 警告: 该备份文件没有校验值记录，无法验证完整性\n")
+	}
+
+	// 6. 创建目标目录
 	fmt.Printf("  → 准备目标目录...\n")
 	absTargetDir, err := filepath.Abs(targetDir)
 	if err != nil {
 		return fmt.Errorf("无法获取目标目录的绝对路径: %w", err)
 	}
 
-	// 6. 根据任务记录里的备份存储地址，解压到-d指定的路径
+	// 7. 根据任务记录里的备份存储地址，解压到-d指定的路径
 	fmt.Printf("  → 正在恢复备份文件...\n")
 	if err := extractBackupFile(record.StoragePath, absTargetDir); err != nil {
 		return fmt.Errorf("恢复失败: %w", err)
 	}
 
-	// 7. 显示结果
+	// 8. 显示结果
 	duration := time.Since(startTime)
 	fmt.Printf("恢复完成！\n")
 	fmt.Printf("耗时: %v\n", duration)

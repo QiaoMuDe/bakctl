@@ -115,3 +115,9 @@ var StyleNone = table.Style{
 
 // 定义存放表格样式的切片
 var TableStyleList = []string{"df", "bd", "cb", "cd", "de", "lt", "ro", "none"}
+
+// 常量定义
+const (
+	HashAlgorithm = "sha1"
+	BackupFileExt = ".zip"
+)
