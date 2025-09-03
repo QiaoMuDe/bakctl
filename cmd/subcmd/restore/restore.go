@@ -115,7 +115,7 @@ func extractBackupFile(backupPath, targetDir string) error {
 		CompressionLevel:      types.CompressionLevelDefault, // 压缩等级默认
 		OverwriteExisting:     false,                         // 覆盖已存在的文件
 		ProgressEnabled:       true,                          // 显示进度条
-		ProgressStyle:         types.ProgressStyleASCII,      // 进度条样式
+		ProgressStyle:         types.ProgressStyleDefault,    // 进度条样式
 		DisablePathValidation: false,                         // 禁用路径验证
 	}
 
