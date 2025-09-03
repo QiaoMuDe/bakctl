@@ -195,6 +195,11 @@ func determineFilesToDelete(backupFiles []BackupFileInfo, retainCount, retainDay
 		return filesToDelete
 	}
 
+	// 安全检查：如果只有一个文件，不删除任何文件
+	if len(backupFiles) <= 1 {
+		return filesToDelete
+	}
+
 	// 当前时间
 	now := time.Now()
 
@@ -204,7 +209,8 @@ func determineFilesToDelete(backupFiles []BackupFileInfo, retainCount, retainDay
 		if len(backupFiles) > retainCount {
 			filesToDelete = backupFiles[retainCount:]
 		}
-		return filesToDelete
+		// 最终安全检查：确保不会删除所有文件
+		return applySafetyCheck(filesToDelete, backupFiles)
 	}
 
 	// 情况2：只设置了保留天数，不限制数量
@@ -215,14 +221,34 @@ func determineFilesToDelete(backupFiles []BackupFileInfo, retainCount, retainDay
 				filesToDelete = append(filesToDelete, fileInfo)
 			}
 		}
-		return filesToDelete
+		// 最终安全检查：确保不会删除所有文件
+		return applySafetyCheck(filesToDelete, backupFiles)
 	}
 
 	// 情况3：同时设置了保留数量和保留天数
 	if retainCount > 0 && retainDays > 0 {
-		return determineFilesToDeleteWithBothPolicies(backupFiles, retainCount, retainDays, now)
+		filesToDelete = determineFilesToDeleteWithBothPolicies(backupFiles, retainCount, retainDays, now)
+		// 最终安全检查：确保不会删除所有文件
+		return applySafetyCheck(filesToDelete, backupFiles)
 	}
 
+	return filesToDelete
+}
+
+// applySafetyCheck 应用最终安全检查，确保不会删除所有文件
+//
+// 参数:
+//   - filesToDelete: 计划删除的文件列表
+//   - allFiles: 所有备份文件列表（已按时间戳降序排序）
+//
+// 返回值:
+//   - []BackupFileInfo: 经过安全检查后的删除文件列表
+func applySafetyCheck(filesToDelete, allFiles []BackupFileInfo) []BackupFileInfo {
+	// 如果要删除的文件数量等于或超过总文件数，只保留最新的一个
+	if len(filesToDelete) >= len(allFiles) && len(allFiles) > 0 {
+		// 保留第一个（最新的），删除其余的
+		return allFiles[1:]
+	}
 	return filesToDelete
 }
 

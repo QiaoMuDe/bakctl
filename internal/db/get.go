@@ -280,7 +280,7 @@ func GetTasksByIDs(db *sqlx.DB, taskIDs []int64) ([]types.BackupTask, error) {
 //   - error：查询过程中的错误
 func GetBackupRecordsByTaskIDWithLimit(db *sqlx.DB, taskID int64, limit int) ([]types.BackupRecord, error) {
 	query := `
-		SELECT task_id, task_name, version_id, backup_filename, backup_size,storage_path, status, failure_message, checksum, created_at
+		SELECT id, task_id, task_name, version_id, backup_filename, backup_size, storage_path, status, failure_message, checksum, created_at
 		FROM backup_records 
 		WHERE task_id = ?
 		ORDER BY created_at DESC
@@ -333,7 +333,7 @@ func GetAllTasks(db *sqlx.DB) ([]types.BackupTask, error) {
 //   - error：查询过程中的错误
 func GetBackupRecordsByTaskID(db *sqlx.DB, taskID int64) ([]types.BackupRecord, error) {
 	query := `
-		SELECT task_id, task_name, version_id, backup_filename, backup_size,
+		SELECT id, task_id, task_name, version_id, backup_filename, backup_size,
 		       storage_path, status, failure_message, checksum, created_at
 		FROM backup_records 
 		WHERE task_id = ?

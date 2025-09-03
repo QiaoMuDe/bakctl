@@ -16,7 +16,6 @@ package cleanup
 
 import (
 	"fmt"
-	"sort"
 
 	"gitee.com/MM-Q/colorlib"
 )
@@ -69,45 +68,4 @@ func CleanupBackupFilesWithLogging(task BackupTask, backupFileExt string, cl *co
 	}
 
 	return nil
-}
-
-// GetCleanupPreview 获取清理预览信息（不实际删除文件）
-//
-// 参数:
-//   - task: 备份任务对象
-//   - backupFileExt: 备份文件扩展名
-//
-// 返回值:
-//   - []BackupFileInfo: 将要删除的文件信息列表
-//   - error: 预览过程中的错误
-func GetCleanupPreview(task BackupTask, backupFileExt string) ([]BackupFileInfo, error) {
-	// 验证参数
-	if err := ValidateCleanupParams(task.GetStorageDir(), task.GetName(), task.GetRetainCount(), task.GetRetainDays()); err != nil {
-		return nil, fmt.Errorf("清理参数验证失败: %w", err)
-	}
-
-	// 如果两个保留策略都为0，返回空列表
-	if task.GetRetainCount() <= 0 && task.GetRetainDays() <= 0 {
-		return []BackupFileInfo{}, nil
-	}
-
-	// 收集备份文件信息
-	backupFiles, err := collectBackupFiles(task.GetStorageDir(), task.GetName(), backupFileExt)
-	if err != nil {
-		return nil, fmt.Errorf("收集备份文件失败: %w", err)
-	}
-
-	if len(backupFiles) == 0 {
-		return []BackupFileInfo{}, nil
-	}
-
-	// 按时间戳降序排序（最新的在前面）
-	sort.Slice(backupFiles, func(i, j int) bool {
-		return backupFiles[i].CreatedTime.After(backupFiles[j].CreatedTime)
-	})
-
-	// 确定需要删除的文件
-	filesToDelete := determineFilesToDelete(backupFiles, task.GetRetainCount(), task.GetRetainDays())
-
-	return filesToDelete, nil
 }
