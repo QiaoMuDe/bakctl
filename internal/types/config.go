@@ -1,3 +1,5 @@
+// Package types 定义了 bakctl 工具的核心数据类型和配置结构。
+// 包含备份任务配置、数据库记录结构以及相关的验证和转换功能。
 package types
 
 import (

@@ -1,3 +1,5 @@
+// Package utils 提供了 bakctl 工具的通用工具函数。
+// 包含字节格式化、哈希计算、JSON 处理和系统路径操作等实用功能。
 package utils
 
 import (
