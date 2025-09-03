@@ -39,11 +39,6 @@ func RestoreCmdMain(database *sqlx.DB, cl *colorlib.ColorLib) error {
 		return fmt.Errorf("版本ID不能为空, 请使用 -vid 指定")
 	}
 
-	// 静默清理孤儿记录（处理错误但不输出）
-	if _, err := DB.CleanupOrphanRecords(database, 0); err != nil {
-		return fmt.Errorf("清理孤儿记录失败: %w", err)
-	}
-
 	cl.Blue("开始恢复备份...")
 	cl.Bluef("任务ID: %d\n", taskID)
 	cl.Bluef("版本ID: %s\n", versionID)

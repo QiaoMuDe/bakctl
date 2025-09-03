@@ -22,11 +22,6 @@ import (
 // 返回:
 //   - error: 错误信息
 func ListCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
-	// 静默清理孤儿记录（处理错误但不输出）
-	if _, err := DB.CleanupOrphanRecords(db, 0); err != nil {
-		return fmt.Errorf("清理孤儿记录失败: %w", err)
-	}
-
 	// 创建表格
 	t := table.NewWriter()
 

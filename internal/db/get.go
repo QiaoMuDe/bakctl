@@ -35,7 +35,7 @@ func TaskExists(db *sqlx.DB, taskID int64) bool {
 //   - error：查询过程中的错误
 func GetBackupRecordByTaskAndVersion(db *sqlx.DB, taskID int64, versionID string) (*types.BackupRecord, error) {
 	query := `
-		SELECT task_id, task_name, version_id, backup_filename, backup_size, 
+		SELECT ID, task_id, task_name, version_id, backup_filename, backup_size, 
 		       storage_path, status, failure_message, checksum, created_at
 		FROM backup_records 
 		WHERE task_id = ? AND version_id = ? AND status = 1
@@ -56,6 +56,7 @@ func GetBackupRecordByTaskAndVersion(db *sqlx.DB, taskID int64, versionID string
 // queryGetAllBackupRecords SQL SELECT 语句，用于查询所有备份记录
 const queryGetAllBackupRecords = `
 	SELECT
+		ID,
 		task_id,
 		task_name,
 		version_id,
@@ -135,7 +136,7 @@ func GetBatchBackupRecords(db *sqlx.DB, tasks []types.BackupTask) (map[int64][]t
 	}
 
 	query := `
-		SELECT task_id, task_name, version_id, backup_filename, backup_size, 
+		SELECT ID, task_id, task_name, version_id, backup_filename, backup_size, 
 		       storage_path, status, failure_message, checksum, created_at
 		FROM backup_records 
 		WHERE task_id IN (?)
