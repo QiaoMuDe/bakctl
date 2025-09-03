@@ -16,6 +16,7 @@ package cleanup
 
 import (
 	"fmt"
+	"sort"
 
 	"gitee.com/MM-Q/colorlib"
 )
@@ -62,12 +63,9 @@ func CleanupBackupFilesWithLogging(task BackupTask, backupFileExt string, cl *co
 		return fmt.Errorf("清理执行失败: %w", err)
 	}
 
-	// 静默执行，只在有删除失败的文件时输出警告
+	// 如果有删除失败的文件，返回错误信息
 	if len(result.ErrorFiles) > 0 {
-		cl.Yellowf("  → 警告: %d 个文件删除失败\n", len(result.ErrorFiles))
-		for _, errorFile := range result.ErrorFiles {
-			cl.Yellowf("    - %s\n", errorFile)
-		}
+		return fmt.Errorf("清理完成，但有 %d 个文件删除失败: %v", len(result.ErrorFiles), result.ErrorFiles)
 	}
 
 	return nil
@@ -103,22 +101,13 @@ func GetCleanupPreview(task BackupTask, backupFileExt string) ([]BackupFileInfo,
 		return []BackupFileInfo{}, nil
 	}
 
-	// 按时间戳降序排序
-	sortBackupFilesByTimestamp(backupFiles)
+	// 按时间戳降序排序（最新的在前面）
+	sort.Slice(backupFiles, func(i, j int) bool {
+		return backupFiles[i].CreatedTime.After(backupFiles[j].CreatedTime)
+	})
 
 	// 确定需要删除的文件
 	filesToDelete := determineFilesToDelete(backupFiles, task.GetRetainCount(), task.GetRetainDays())
 
 	return filesToDelete, nil
-}
-
-// sortBackupFilesByTimestamp 按创建时间降序排序备份文件
-func sortBackupFilesByTimestamp(backupFiles []BackupFileInfo) {
-	for i := 0; i < len(backupFiles)-1; i++ {
-		for j := i + 1; j < len(backupFiles); j++ {
-			if backupFiles[i].CreatedTime.Before(backupFiles[j].CreatedTime) {
-				backupFiles[i], backupFiles[j] = backupFiles[j], backupFiles[i]
-			}
-		}
-	}
 }

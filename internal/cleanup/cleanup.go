@@ -10,7 +10,7 @@
 // 清理策略说明：
 //   - retainCount: 保留最新的N个备份文件（按时间戳排序）
 //   - retainDays: 保留最近N天内的备份文件
-//   - 两个策略可以同时生效，文件满足任一条件即被保留
+//   - 同时设置时：先按天数过滤，然后每天只保留最新的N个备份文件
 //   - 当两个策略都为0时，不执行任何清理操作
 package cleanup
 
@@ -170,6 +170,11 @@ func collectBackupFiles(storageDir, taskName, backupFileExt string) ([]BackupFil
 
 // determineFilesToDelete 根据保留策略确定需要删除的文件
 //
+// 清理策略：
+//   - 只设置retainCount：保留最新的N个备份文件
+//   - 只设置retainDays：保留最近N天内的所有备份文件
+//   - 同时设置：先按天数过滤，然后每天只保留最新的N个备份文件
+//
 // 参数:
 //   - backupFiles: 备份文件信息列表（已按时间戳降序排序）
 //   - retainCount: 保留备份数量 (0表示不限制数量)
@@ -190,53 +195,107 @@ func determineFilesToDelete(backupFiles []BackupFileInfo, retainCount, retainDay
 		return filesToDelete
 	}
 
-	// 快速失败：如果只有一个文件，不删除任何文件
-	if len(backupFiles) <= 1 {
+	// 当前时间
+	now := time.Now()
+
+	// 情况1：只设置了保留数量，不限制天数
+	if retainCount > 0 && retainDays <= 0 {
+		// 保留最新的 retainCount 个文件，删除其余的
+		if len(backupFiles) > retainCount {
+			filesToDelete = backupFiles[retainCount:]
+		}
 		return filesToDelete
 	}
 
-	now := time.Now()
-
-	// 创建保留文件的映射，用于去重
-	retainedFiles := make(map[string]bool)
-
-	// 1. 根据保留数量策略确定要保留的文件
-	if retainCount > 0 {
-		// 保留最新的 retainCount 个文件（但不超过现有文件数量）
-		for i := 0; i < retainCount && i < len(backupFiles); i++ {
-			retainedFiles[backupFiles[i].FilePath] = true
-		}
-	}
-
-	// 2. 根据保留天数策略确定要保留的文件
-	if retainDays > 0 {
+	// 情况2：只设置了保留天数，不限制数量
+	if retainDays > 0 && retainCount <= 0 {
 		cutoffTime := now.AddDate(0, 0, -retainDays)
 		for _, fileInfo := range backupFiles {
-			if fileInfo.CreatedTime.After(cutoffTime) {
-				retainedFiles[fileInfo.FilePath] = true
+			if fileInfo.CreatedTime.Before(cutoffTime) || fileInfo.CreatedTime.Equal(cutoffTime) {
+				filesToDelete = append(filesToDelete, fileInfo)
 			}
 		}
+		return filesToDelete
 	}
 
-	// 4. 安全检查：如果没有文件被标记为保留，至少保留最新的一个
-	if len(retainedFiles) == 0 && len(backupFiles) > 0 {
-		retainedFiles[backupFiles[0].FilePath] = true
-	}
-
-	// 5. 确定需要删除的文件（不在保留列表中的文件）
-	for _, fileInfo := range backupFiles {
-		if !retainedFiles[fileInfo.FilePath] {
-			filesToDelete = append(filesToDelete, fileInfo)
-		}
-	}
-
-	// 6. 最终安全检查：确保不会删除所有文件
-	if len(filesToDelete) >= len(backupFiles) && len(backupFiles) > 0 {
-		// 如果要删除的文件数量等于或超过总文件数，只保留最新的一个
-		filesToDelete = backupFiles[1:] // 保留第一个（最新的），删除其余的
+	// 情况3：同时设置了保留数量和保留天数
+	if retainCount > 0 && retainDays > 0 {
+		return determineFilesToDeleteWithBothPolicies(backupFiles, retainCount, retainDays, now)
 	}
 
 	return filesToDelete
+}
+
+// determineFilesToDeleteWithBothPolicies 处理同时设置保留数量和保留天数的情况
+//
+// 逻辑：先按天数过滤，然后每天只保留最新的N个备份文件
+//
+// 参数:
+//   - backupFiles: 备份文件信息列表（已按时间戳降序排序）
+//   - retainCount: 保留备份数量
+//   - retainDays: 保留天数
+//   - now: 当前时间
+//
+// 返回值:
+//   - []BackupFileInfo: 需要删除的文件信息列表
+func determineFilesToDeleteWithBothPolicies(backupFiles []BackupFileInfo, retainCount, retainDays int, now time.Time) []BackupFileInfo {
+	var filesToDelete []BackupFileInfo
+
+	// 1. 先按天数过滤：超过保留天数的文件直接删除
+	cutoffTime := now.AddDate(0, 0, -retainDays)
+	var filesWithinDays []BackupFileInfo
+
+	for _, fileInfo := range backupFiles {
+		if fileInfo.CreatedTime.Before(cutoffTime) || fileInfo.CreatedTime.Equal(cutoffTime) {
+			// 超过保留天数，直接删除
+			filesToDelete = append(filesToDelete, fileInfo)
+		} else {
+			// 在保留天数内，加入候选列表
+			filesWithinDays = append(filesWithinDays, fileInfo)
+		}
+	}
+
+	// 2. 对保留天数内的文件按日期分组
+	dailyGroups := groupFilesByDate(filesWithinDays)
+
+	// 3. 每天只保留最新的 retainCount 个文件
+	for _, dailyFiles := range dailyGroups {
+		// 每天的文件已经按时间降序排序，保留前 retainCount 个
+		if len(dailyFiles) > retainCount {
+			// 删除超出保留数量的文件
+			filesToDelete = append(filesToDelete, dailyFiles[retainCount:]...)
+		}
+	}
+
+	return filesToDelete
+}
+
+// groupFilesByDate 按日期对备份文件进行分组
+//
+// 参数:
+//   - backupFiles: 备份文件信息列表
+//
+// 返回值:
+//   - map[string][]BackupFileInfo: 按日期分组的文件映射，key为日期字符串(YYYY-MM-DD)
+func groupFilesByDate(backupFiles []BackupFileInfo) map[string][]BackupFileInfo {
+	dailyGroups := make(map[string][]BackupFileInfo)
+
+	for _, fileInfo := range backupFiles {
+		// 获取日期字符串 (YYYY-MM-DD)
+		dateKey := fileInfo.CreatedTime.Format("2006-01-02")
+
+		// 添加到对应日期的组中
+		dailyGroups[dateKey] = append(dailyGroups[dateKey], fileInfo)
+	}
+
+	// 对每天的文件按时间降序排序（最新的在前面）
+	for dateKey := range dailyGroups {
+		sort.Slice(dailyGroups[dateKey], func(i, j int) bool {
+			return dailyGroups[dateKey][i].CreatedTime.After(dailyGroups[dateKey][j].CreatedTime)
+		})
+	}
+
+	return dailyGroups
 }
 
 // ValidateCleanupParams 验证清理参数的合法性
