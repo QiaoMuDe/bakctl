@@ -27,21 +27,14 @@ import (
 // BackupFileInfo 备份文件信息
 type BackupFileInfo struct {
 	FilePath    string    // 文件完整路径
-	FileName    string    // 文件名
-	TaskName    string    // 任务名称
-	Timestamp   int64     // 时间戳
 	CreatedTime time.Time // 创建时间
-	FileSize    int64     // 文件大小
 }
 
 // CleanupResult 清理结果
 type CleanupResult struct {
-	TotalFiles    int      // 总文件数
-	DeletedFiles  int      // 删除的文件数
-	RetainedFiles int      // 保留的文件数
-	DeletedPaths  []string // 删除的文件路径列表
-	ErrorFiles    []string // 删除失败的文件路径列表
-	TotalSize     int64    // 删除的总文件大小
+	TotalFiles   int      // 总文件数
+	DeletedFiles int      // 删除的文件数
+	ErrorFiles   []string // 删除失败的文件路径列表
 }
 
 // CleanupBackupFiles 清理历史备份文件
@@ -58,8 +51,7 @@ type CleanupResult struct {
 //   - error: 清理过程中的错误
 func CleanupBackupFiles(storageDir, taskName string, retainCount, retainDays int, backupFileExt string) (CleanupResult, error) {
 	result := CleanupResult{
-		DeletedPaths: make([]string, 0),
-		ErrorFiles:   make([]string, 0),
+		ErrorFiles: make([]string, 0),
 	}
 
 	// 如果两个保留策略都为0，则不进行清理
@@ -80,9 +72,9 @@ func CleanupBackupFiles(storageDir, taskName string, retainCount, retainDays int
 		return result, nil
 	}
 
-	// 2. 按时间戳降序排序（最新的在前面）
+	// 2. 按创建时间降序排序（最新的在前面）
 	sort.Slice(backupFiles, func(i, j int) bool {
-		return backupFiles[i].Timestamp > backupFiles[j].Timestamp
+		return backupFiles[i].CreatedTime.After(backupFiles[j].CreatedTime)
 	})
 
 	// 3. 确定需要删除的文件
@@ -95,13 +87,8 @@ func CleanupBackupFiles(storageDir, taskName string, retainCount, retainDays int
 			result.ErrorFiles = append(result.ErrorFiles, fileInfo.FilePath)
 		} else { // 删除成功
 			result.DeletedFiles++
-			result.DeletedPaths = append(result.DeletedPaths, fileInfo.FilePath)
-			result.TotalSize += fileInfo.FileSize
 		}
 	}
-
-	// 5. 统计保留的文件数
-	result.RetainedFiles = result.TotalFiles - result.DeletedFiles
 
 	return result, nil
 }
@@ -169,20 +156,10 @@ func collectBackupFiles(storageDir, taskName, backupFileExt string) ([]BackupFil
 		// 获取文件完整路径
 		filePath := filepath.Join(storageDir, fileName)
 
-		// 获取文件信息
-		fileInfo, err := os.Stat(filePath)
-		if err != nil {
-			continue // 获取文件信息失败，跳过
-		}
-
 		// 创建备份文件信息
 		backupFileInfo := BackupFileInfo{
-			FilePath:    filePath,           // 文件路径
-			FileName:    fileName,           // 文件名
-			TaskName:    taskName,           // 任务名称
-			Timestamp:   createdTime.Unix(), // 转换为Unix时间戳用于兼容
-			CreatedTime: createdTime,        // 创建时间
-			FileSize:    fileInfo.Size(),    // 文件大小
+			FilePath:    filePath,    // 文件路径
+			CreatedTime: createdTime, // 创建时间
 		}
 
 		backupFiles = append(backupFiles, backupFileInfo)
@@ -262,33 +239,6 @@ func determineFilesToDelete(backupFiles []BackupFileInfo, retainCount, retainDay
 	return filesToDelete
 }
 
-// FormatCleanupResult 格式化清理结果为可读字符串
-//
-// 参数:
-//   - result: 清理结果
-//
-// 返回值:
-//   - string: 格式化后的结果字符串
-func FormatCleanupResult(result CleanupResult) string {
-	var builder strings.Builder
-
-	builder.WriteString(fmt.Sprintf("清理完成: 总文件 %d 个", result.TotalFiles))
-
-	if result.DeletedFiles > 0 {
-		builder.WriteString(fmt.Sprintf(", 删除 %d 个", result.DeletedFiles))
-		builder.WriteString(fmt.Sprintf(", 保留 %d 个", result.RetainedFiles))
-		builder.WriteString(fmt.Sprintf(", 释放空间 %s", formatBytes(result.TotalSize)))
-	} else {
-		builder.WriteString(", 无需清理")
-	}
-
-	if len(result.ErrorFiles) > 0 {
-		builder.WriteString(fmt.Sprintf(", 删除失败 %d 个", len(result.ErrorFiles)))
-	}
-
-	return builder.String()
-}
-
 // ValidateCleanupParams 验证清理参数的合法性
 //
 // 参数:
@@ -321,18 +271,4 @@ func ValidateCleanupParams(storageDir, taskName string, retainCount, retainDays 
 	}
 
 	return nil
-}
-
-// formatBytes 格式化字节数为可读字符串
-func formatBytes(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }

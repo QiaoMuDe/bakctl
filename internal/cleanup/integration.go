@@ -29,7 +29,7 @@ type BackupTask interface {
 	GetRetainDays() int
 }
 
-// CleanupBackupFilesWithLogging 带日志输出的清理函数
+// CleanupBackupFilesWithLogging 静默清理历史备份文件
 //
 // 参数:
 //   - task: 备份任务对象
@@ -44,9 +44,8 @@ func CleanupBackupFilesWithLogging(task BackupTask, backupFileExt string, cl *co
 		return fmt.Errorf("清理参数验证失败: %w", err)
 	}
 
-	// 如果两个保留策略都为0，跳过清理
+	// 如果两个保留策略都为0，静默跳过清理
 	if task.GetRetainCount() <= 0 && task.GetRetainDays() <= 0 {
-		cl.White("  → 跳过清理 (未设置保留策略)")
 		return nil
 	}
 
@@ -63,14 +62,7 @@ func CleanupBackupFilesWithLogging(task BackupTask, backupFileExt string, cl *co
 		return fmt.Errorf("清理执行失败: %w", err)
 	}
 
-	// 输出清理结果
-	if result.DeletedFiles > 0 {
-		cl.Whitef("  → %s\n", FormatCleanupResult(result))
-	} else {
-		cl.White("  → 无需清理历史备份")
-	}
-
-	// 如果有删除失败的文件，输出警告
+	// 静默执行，只在有删除失败的文件时输出警告
 	if len(result.ErrorFiles) > 0 {
 		cl.Yellowf("  → 警告: %d 个文件删除失败\n", len(result.ErrorFiles))
 		for _, errorFile := range result.ErrorFiles {
@@ -120,11 +112,11 @@ func GetCleanupPreview(task BackupTask, backupFileExt string) ([]BackupFileInfo,
 	return filesToDelete, nil
 }
 
-// sortBackupFilesByTimestamp 按时间戳降序排序备份文件
+// sortBackupFilesByTimestamp 按创建时间降序排序备份文件
 func sortBackupFilesByTimestamp(backupFiles []BackupFileInfo) {
 	for i := 0; i < len(backupFiles)-1; i++ {
 		for j := i + 1; j < len(backupFiles); j++ {
-			if backupFiles[i].Timestamp < backupFiles[j].Timestamp {
+			if backupFiles[i].CreatedTime.Before(backupFiles[j].CreatedTime) {
 				backupFiles[i], backupFiles[j] = backupFiles[j], backupFiles[i]
 			}
 		}

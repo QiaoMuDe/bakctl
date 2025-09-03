@@ -133,14 +133,13 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) e
 	result.FileSize = size     // 备份文件大小
 	result.Checksum = checksum // 备份文件哈希值
 
-	// 9. 清理历史备份
-	cl.White("  → 清理历史备份...")
+	// 9. 清理历史备份（静默执行）
 	taskAdapter := cleanup.NewBackupTaskAdapter(
 		task.ID, task.Name, task.StorageDir,
 		task.RetainCount, task.RetainDays,
 	)
 	if err := cleanup.CleanupBackupFilesWithLogging(taskAdapter, baktypes.BackupFileExt, cl); err != nil {
-		cl.Yellowf("  → 清理警告: %v\n", err)
+		return fmt.Errorf("清理历史备份失败: %w", err)
 	}
 
 	// 10. 清理孤儿记录（静默执行，但处理错误）
@@ -164,17 +163,16 @@ func executeTasks(tasks []baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLi
 	successCount := 0 // 成功数量
 	failureCount := 0 // 失败数量
 
-	fmt.Println()
-	cl.Bluef("开始执行 %d 个备份任务...\n", len(tasks))
-
+	// 执行每个任务
+	fmt.Println() // 换行
 	for i, task := range tasks {
-		cl.Whitef("[%d/%d] 正在执行任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
+		cl.Bluef("[%d/%d] 正在执行任务: %s (ID: %d)\n", i+1, len(tasks), task.Name, task.ID)
 
 		if err := executeTask(task, db, cl); err != nil {
 			cl.Redf("任务执行失败: %v\n", err)
 			failureCount++
 		} else {
-			cl.Green("任务执行成功")
+			cl.Greenf("任务执行成功 (ID: %d)\n", task.ID)
 			successCount++
 		}
 	}
