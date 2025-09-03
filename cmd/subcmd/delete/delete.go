@@ -59,6 +59,11 @@ func DeleteCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 		return fmt.Errorf("查找任务失败: %w", err)
 	}
 
+	// 验证任务列表
+	if len(tasks) == 0 {
+		return fmt.Errorf("未找到要删除的任务")
+	}
+
 	// 用户确认
 	confirmed, err := confirmDeletion(db, tasks, keepFilesF.Get(), cl)
 	if err != nil {
