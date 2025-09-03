@@ -64,6 +64,7 @@ type UpdateTaskParams struct {
 // - db:"列名"：sqlx用于映射SQLite表列，确保与表字段名完全一致
 // - json:"字段名"：可选，用于API返回或日志打印（按需保留）
 type BackupRecord struct {
+	ID             int64  `db:"ID" json:"id"`                                     // 主键（自增）
 	TaskID         int64  `db:"task_id" json:"task_id"`                           // 关联的任务ID（外键，非空，关联backup_tasks.ID）
 	TaskName       string `db:"task_name" json:"task_name"`                       // 关联的任务名称（冗余存储，非空，便于查询）
 	VersionID      string `db:"version_id" json:"version_id"`                     // 备份版本唯一标识（非空+唯一，如UUID/时间戳）

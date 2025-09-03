@@ -143,6 +143,11 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) e
 		cl.Yellowf("  → 清理警告: %v\n", err)
 	}
 
+	// 10. 清理孤儿记录（静默执行，但处理错误）
+	if _, err := DB.CleanupOrphanRecords(db, task.ID); err != nil {
+		return fmt.Errorf("清理孤儿记录失败: %w", err)
+	}
+
 	return nil
 }
 

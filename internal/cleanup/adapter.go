@@ -14,11 +14,11 @@ package cleanup
 // BackupTaskAdapter 备份任务适配器
 // 用于将具体的备份任务结构体适配到清理算法的接口
 type BackupTaskAdapter struct {
-	ID          int64
-	Name        string
-	StorageDir  string
-	RetainCount int
-	RetainDays  int
+	ID          int64  // 任务ID
+	Name        string // 任务名称
+	StorageDir  string // 存储目录
+	RetainCount int    // 保留数量
+	RetainDays  int    // 保留天数
 }
 
 // GetID 获取任务ID

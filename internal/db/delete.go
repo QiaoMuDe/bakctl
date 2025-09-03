@@ -58,3 +58,38 @@ func DeleteBackupTask(db *sqlx.DB, taskID int64) error {
 
 	return nil
 }
+
+// DeleteBackupRecordsByIDs 根据记录ID批量删除备份记录
+//
+// 参数:
+//   - db: 数据库连接
+//   - recordIDs: 要删除的记录ID列表
+//
+// 返回值:
+//   - int: 实际删除的记录数
+//   - error: 删除失败时返回错误信息
+func DeleteBackupRecordsByIDs(db *sqlx.DB, recordIDs []int64) (int, error) {
+	if len(recordIDs) == 0 {
+		return 0, nil
+	}
+
+	// 使用sqlx.In来构建IN查询
+	query := "DELETE FROM backup_records WHERE ID IN (?)"
+	query, args, err := sqlx.In(query, recordIDs)
+	if err != nil {
+		return 0, fmt.Errorf("构建删除查询失败: %w", err)
+	}
+	query = db.Rebind(query)
+
+	result, err := db.Exec(query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("批量删除备份记录失败: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("获取删除结果失败: %w", err)
+	}
+
+	return int(rowsAffected), nil
+}

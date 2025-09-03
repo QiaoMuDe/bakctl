@@ -24,6 +24,7 @@ import (
 // 返回:
 //   - error: 错误信息，如果没有错误则返回nil
 func RestoreCmdMain(database *sqlx.DB, cl *colorlib.ColorLib) error {
+	// 获取开始时间
 	startTime := time.Now()
 
 	// 1. 检查 -id 和 -vid 是否为空，必须都不为空
@@ -36,6 +37,11 @@ func RestoreCmdMain(database *sqlx.DB, cl *colorlib.ColorLib) error {
 
 	if versionID == "" {
 		return fmt.Errorf("版本ID不能为空, 请使用 -vid 指定")
+	}
+
+	// 静默清理孤儿记录（处理错误但不输出）
+	if _, err := DB.CleanupOrphanRecords(database, 0); err != nil {
+		return fmt.Errorf("清理孤儿记录失败: %w", err)
 	}
 
 	cl.Blue("开始恢复备份...")
