@@ -67,15 +67,15 @@ cd bakctl
 # 编译安装
 go build -o bakctl cmd/bakctl/main.go
 
-# 或使用 go install
-go install gitee.com/MM-Q/bakctl/cmd/bakctl@latest
+# 通过build.py一键编译安装
+python build.py -s -ai -f
 ```
 
 ### 🔧 系统要求
 
 - **Go 版本**：1.25.0 或更高版本
 - **操作系统**：Windows 10+、Linux、macOS
-- **磁盘空间**：至少 50MB 可用空间
+- **磁盘空间**：至少 8MB 可用空间
 
 ## 📚 使用示例
 
@@ -92,10 +92,10 @@ bakctl add --name "我的文档备份" --backup-dir "/home/user/documents" --sto
 bakctl list
 
 # 执行指定任务的备份
-bakctl run --task-id 1
+bakctl run -id 1
 
 # 查看备份日志
-bakctl log --task-id 1
+bakctl log -id 1
 ```
 
 ### 🔧 高级用法
@@ -113,16 +113,16 @@ bakctl add \
   --retain-days 30
 
 # 批量执行多个任务
-bakctl run --task-ids 1,2,3
+bakctl run -ids 1,2,3
 
 # 执行所有任务
 bakctl run --all
 
 # 恢复指定版本的备份
-bakctl restore --task-id 1 --version-id "abc123" --target-dir "/restore/path"
+bakctl restore -id 1 -vid "abc123" -d "/restore/path"
 
 # 删除任务及其所有备份数据
-bakctl delete --task-id 1 --delete-backups
+bakctl delete -id 1 
 ```
 
 ### 📋 配置文件示例
@@ -272,34 +272,6 @@ bakctl/
 ├── LICENSE                 # MIT 许可证
 └── README.md               # 项目文档
 ```
-
-## 🧪 测试说明
-
-### 🔧 运行测试
-
-```bash
-# 运行所有测试
-go test ./...
-
-# 运行特定包的测试
-go test ./internal/db
-go test ./internal/cleanup
-
-# 运行测试并显示覆盖率
-go test -cover ./...
-
-# 生成详细的测试报告
-go test -v -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-```
-
-### 📊 测试覆盖范围
-
-- ✅ **数据库操作**：CRUD 操作、事务处理
-- ✅ **备份功能**：文件压缩、完整性校验
-- ✅ **清理机制**：过期文件清理、孤儿记录清理
-- ✅ **配置解析**：TOML 配置文件解析
-- ✅ **错误处理**：异常情况处理
 
 ## 📄 许可证
 
