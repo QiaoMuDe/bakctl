@@ -27,6 +27,19 @@ type AddTaskConfig struct {
 	MinFileSize  int64    `toml:"min_file_size" comment:"最小文件大小(可选, 小于此尺寸的文件不备份, 单位字节, 默认为0表示不限制; 示例: 1024 = 1KB)"`       // 最小文件大小
 }
 
+type TaskConfig struct {
+	Name         string   // 任务名称
+	BackupDir    string   // 备份源目录
+	StorageDir   string   // 备份存储目录
+	RetainCount  int      // 保留备份数量
+	RetainDays   int      // 保留备份天数
+	Compress     bool     // 是否压缩
+	IncludeRules []string // 包含规则
+	ExcludeRules []string // 排除规则
+	MaxFileSize  int64    // 最大文件大小
+	MinFileSize  int64    // 最小文件大小
+}
+
 // invalidChars 全局map，用于定义不允许的特殊字符。
 // 路径分隔符 '/' 和 '\' 在路径验证时被明确允许。
 var invalidChars = map[rune]struct{}{

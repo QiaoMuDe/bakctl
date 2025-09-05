@@ -19,9 +19,9 @@ var (
 	exportCmd *cmd.Cmd // 导出备份任务命令
 
 	// 任务选择标志
-	idF  *qflag.IntFlag   // 单个任务ID
-	idsF *qflag.SliceFlag // 多个任务ID
-	allF *qflag.BoolFlag  // 导出所有任务
+	idF  *qflag.IntFlag         // 单个任务ID
+	idsF *qflag.StringSliceFlag // 多个任务ID
+	allF *qflag.BoolFlag        // 导出所有任务
 
 	// 导出类型标志
 	cmdF    *qflag.BoolFlag // 导出添加任务命令
@@ -39,7 +39,7 @@ func InitExportCmd() *cmd.Cmd {
 
 	// 任务选择标志 (三选一)
 	idF = exportCmd.Int("", "id", 0, "指定单个任务ID进行导出")
-	idsF = exportCmd.Slice("", "ids", []string{}, "指定多个任务ID进行导出, 用逗号分隔")
+	idsF = exportCmd.StringSlice("", "ids", []string{}, "指定多个任务ID进行导出, 用逗号分隔")
 	allF = exportCmd.Bool("", "all", false, "导出所有任务")
 
 	// 导出类型标志 (二选一)

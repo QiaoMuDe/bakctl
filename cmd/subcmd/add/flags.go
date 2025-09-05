@@ -35,12 +35,12 @@ var (
 	compressF *qflag.BoolFlag // 是否压缩
 
 	// 文件过滤规则
-	includeF *qflag.SliceFlag // 包含规则
-	excludeF *qflag.SliceFlag // 排除规则
+	includeF *qflag.StringSliceFlag // 包含规则
+	excludeF *qflag.StringSliceFlag // 排除规则
 
 	// 文件大小限制
-	maxSizeF *qflag.Int64Flag // 最大文件大小
-	minSizeF *qflag.Int64Flag // 最小文件大小
+	maxSizeF *qflag.SizeFlag // 最大文件大小
+	minSizeF *qflag.SizeFlag // 最小文件大小
 )
 
 // InitAddCmd 初始化添加备份命令
@@ -66,12 +66,12 @@ func InitAddCmd() *cmd.Cmd {
 	compressF = addCmd.Bool("compress", "c", false, "是否压缩备份")
 
 	// 文件过滤规则
-	includeF = addCmd.Slice("include", "i", []string{}, "包含规则, 多个规则用逗号分隔")
-	excludeF = addCmd.Slice("exclude", "e", []string{}, "排除规则, 多个规则用逗号分隔")
+	includeF = addCmd.StringSlice("include", "i", []string{}, "包含规则, 多个规则用逗号分隔")
+	excludeF = addCmd.StringSlice("exclude", "e", []string{}, "排除规则, 多个规则用逗号分隔")
 
 	// 文件大小限制
-	maxSizeF = addCmd.Int64("max-size", "mx", 0, "最大文件大小 (字节, 0表示无限制)")
-	minSizeF = addCmd.Int64("min-size", "ms", 0, "最小文件大小 (字节, 0表示无限制)")
+	maxSizeF = addCmd.Size("max-size", "mx", 0, "最大文件大小 (默认0表示无限制)")
+	minSizeF = addCmd.Size("min-size", "ms", 0, "最小文件大小 (默认0表示无限制)")
 
 	return addCmd
 }
