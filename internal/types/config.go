@@ -15,29 +15,16 @@ type RootConfig struct {
 // AddTaskConfig 表示添加备份任务的配置结构
 // 对应TOML配置文件中的[AddTaskConfig]部分
 type AddTaskConfig struct {
-	Name         string   `toml:"name" comment:"任务名称(必填, 唯一, 不可重复)"`                                                      // 任务名称
-	BackupDir    string   `toml:"backup_dir" comment:"备份源目录(必填, 单个路径, 支持Windows和Linux路径)"`                                // 备份源目录
-	StorageDir   string   `toml:"storage_dir" comment:"备份存储目录(必填, 单个路径, 备份文件最终存放位置, 如果为'', 则默认使用 ~/.bakctl)"`             // 备份存储目录
-	RetainCount  int      `toml:"retain_count" comment:"保留备份文件的数量(可选, 默认0个; 设置为0表示不按数量限制)"`                               // 保留备份文件的数量
-	RetainDays   int      `toml:"retain_days" comment:"保留备份文件的天数(可选, 默认0天; 设置为0表示不按天数限制)"`                                // 保留备份文件的天数
-	Compress     bool     `toml:"compress" comment:"是否压缩(可选, 默认false)"`                                                   // 是否压缩
-	IncludeRules []string `toml:"include_rules" comment:"包含规则(可选, 仅备份符合规则的文件; 空数组表示备份所有文件)"`                              // 包含规则
-	ExcludeRules []string `toml:"exclude_rules" comment:"排除规则(可选, 不备份符合规则的文件; 优先级高于包含规则, 即\"先包含后排除\")"`                   // 排除规则
-	MaxFileSize  int64    `toml:"max_file_size" comment:"最大文件大小(可选, 超过此尺寸的文件不备份, 单位字节, 默认为0表示不限制; 示例: 1073741824 = 1GB)"` // 最大文件大小
-	MinFileSize  int64    `toml:"min_file_size" comment:"最小文件大小(可选, 小于此尺寸的文件不备份, 单位字节, 默认为0表示不限制; 示例: 1024 = 1KB)"`       // 最小文件大小
-}
-
-type TaskConfig struct {
-	Name         string   // 任务名称
-	BackupDir    string   // 备份源目录
-	StorageDir   string   // 备份存储目录
-	RetainCount  int      // 保留备份数量
-	RetainDays   int      // 保留备份天数
-	Compress     bool     // 是否压缩
-	IncludeRules []string // 包含规则
-	ExcludeRules []string // 排除规则
-	MaxFileSize  int64    // 最大文件大小
-	MinFileSize  int64    // 最小文件大小
+	Name         string   `toml:"name" comment:"任务名称(必填, 唯一, 不可重复)"`                                                                                                // 任务名称
+	BackupDir    string   `toml:"backup_dir" comment:"备份源目录(必填, 单个路径, 支持Windows和Linux路径)"`                                                                          // 备份源目录
+	StorageDir   string   `toml:"storage_dir" comment:"备份存储目录(必填, 单个路径, 备份文件最终存放位置, 如果为'', 则默认使用 ~/.bakctl)"`                                                       // 备份存储目录
+	RetainCount  int      `toml:"retain_count" comment:"保留备份文件的数量(可选, 默认0个; 设置为0表示不按数量限制)"`                                                                         // 保留备份文件的数量
+	RetainDays   int      `toml:"retain_days" comment:"保留备份文件的天数(可选, 默认0天; 设置为0表示不按天数限制)"`                                                                          // 保留备份文件的天数
+	Compress     bool     `toml:"compress" comment:"是否压缩(可选, 默认false)"`                                                                                             // 是否压缩
+	IncludeRules []string `toml:"include_rules" comment:"包含规则(可选, 仅备份符合规则的文件; 空数组表示备份所有文件)"`                                                                        // 包含规则
+	ExcludeRules []string `toml:"exclude_rules" comment:"排除规则(可选, 不备份符合规则的文件; 优先级高于包含规则, 即\"先包含后排除\")"`                                                             // 排除规则
+	MaxFileSize  int64    `toml:"max_file_size" comment:"最大文件大小(可选, 超过此尺寸的文件不备份, 单位字节, 默认为0表示不限制; 常用换算: 1KB=1024, 1MB=1048576, 1GB=1073741824, 1TB=1099511627776)"` // 最大文件大小
+	MinFileSize  int64    `toml:"min_file_size" comment:"最小文件大小(可选, 小于此尺寸的文件不备份, 单位字节, 默认为0表示不限制; 常用换算: 1KB=1024, 1MB=1048576, 1GB=1073741824, 1TB=1099511627776)"` // 最小文件大小
 }
 
 // invalidChars 全局map，用于定义不允许的特殊字符。

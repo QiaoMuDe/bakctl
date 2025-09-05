@@ -174,14 +174,14 @@ func updateTask(db *sqlx.DB, taskID int64) error {
 
 	// 创建 UpdateTaskParams 结构体实例
 	params := types.UpdateTaskParams{
-		ID:           taskID,
-		RetainCount:  newRetainCount,
-		RetainDays:   newRetainDays,
-		Compress:     newCompress,
-		IncludeRules: newIncludeRules,
-		ExcludeRules: newExcludeRules,
-		MaxFileSize:  newMaxFileSize,
-		MinFileSize:  newMinFileSize,
+		ID:           taskID,          // 任务ID
+		RetainCount:  newRetainCount,  // 备份保留数量
+		RetainDays:   newRetainDays,   // 备份保留天数
+		Compress:     newCompress,     // 备份是否压缩
+		IncludeRules: newIncludeRules, // 包含规则
+		ExcludeRules: newExcludeRules, // 排除规则
+		MaxFileSize:  newMaxFileSize,  // 最大文件大小
+		MinFileSize:  newMinFileSize,  // 最小文件大小
 	}
 
 	// 调用 db 包中的 UpdateTask 函数，传入结构体

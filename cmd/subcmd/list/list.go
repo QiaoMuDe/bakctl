@@ -23,6 +23,7 @@ import (
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/bakctl/internal/utils"
 	"gitee.com/MM-Q/colorlib"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -87,7 +88,7 @@ func ListCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 		}
 	} else {
 		// 完整模式：显示所有信息
-		t.AppendHeader(table.Row{"ID", "任务名", "保留数量", "保留天数", "备份源目录", "备份存储目录", "是否压缩", "包含规则", "排除规则", "最大文件大小(字节)", "最小文件大小(字节)"})
+		t.AppendHeader(table.Row{"ID", "任务名", "保留数量", "保留天数", "备份源目录", "备份存储目录", "是否压缩", "包含规则", "排除规则", "最大文件大小", "最小文件大小"})
 
 		t.SetColumnConfigs([]table.ColumnConfig{
 			{Name: "ID", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
@@ -99,24 +100,24 @@ func ListCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 			{Name: "是否压缩", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
 			{Name: "包含规则", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 			{Name: "排除规则", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-			{Name: "最大文件大小(字节)", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
-			{Name: "最小文件大小(字节)", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
+			{Name: "最大文件大小", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
+			{Name: "最小文件大小", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
 		})
 
 		// 添加完整模式数据行
 		for _, task := range data {
 			t.AppendRow(table.Row{
-				task.ID,           // ID
-				task.Name,         // 任务名
-				task.RetainCount,  // 保留数量
-				task.RetainDays,   // 保留天数
-				task.BackupDir,    // 备份源目录
-				task.StorageDir,   // 备份存储目录
-				task.Compress,     // 是否压缩
-				task.IncludeRules, // 包含规则
-				task.ExcludeRules, // 排除规则
-				task.MaxFileSize,  // 最大文件大小
-				task.MinFileSize,  // 最小文件大小
+				task.ID,                             // ID
+				task.Name,                           // 任务名
+				task.RetainCount,                    // 保留数量
+				task.RetainDays,                     // 保留天数
+				task.BackupDir,                      // 备份源目录
+				task.StorageDir,                     // 备份存储目录
+				task.Compress,                       // 是否压缩
+				task.IncludeRules,                   // 包含规则
+				task.ExcludeRules,                   // 排除规则
+				utils.FormatBytes(task.MaxFileSize), // 最大文件大小
+				utils.FormatBytes(task.MinFileSize), // 最小文件大小
 			})
 		}
 	}

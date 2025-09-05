@@ -70,8 +70,8 @@ func InitAddCmd() *cmd.Cmd {
 	excludeF = addCmd.StringSlice("exclude", "e", []string{}, "排除规则, 多个规则用逗号分隔")
 
 	// 文件大小限制
-	maxSizeF = addCmd.Size("max-size", "mx", 0, "最大文件大小 (默认0表示无限制)")
-	minSizeF = addCmd.Size("min-size", "ms", 0, "最小文件大小 (默认0表示无限制)")
+	maxSizeF = addCmd.Size("max-size", "mx", 0, "最大文件大小 (0表示无限制)")
+	minSizeF = addCmd.Size("min-size", "ms", 0, "最小文件大小 (0表示无限制)")
 
 	return addCmd
 }
