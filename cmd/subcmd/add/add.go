@@ -79,19 +79,48 @@ func addTaskFromConfigFile(db *sqlx.DB, configPath string, cl *colorlib.ColorLib
 		return err
 	}
 
-	// 检查必须参数
-	if err := config.AddTaskConfig.Validate(); err != nil {
-		return fmt.Errorf("配置文件验证失败: %v", err)
-	}
-
 	// 检查任务名是否已存在
 	taskID, err := DB.GetTaskIDByName(db, config.AddTaskConfig.Name)
 	if err == nil && taskID != 0 {
 		return fmt.Errorf("任务名称 '%s' 已存在，请使用其他名称", config.AddTaskConfig.Name)
 	}
 
+	// 获取最大文件大小
+	var maxFileSize int64
+	if config.AddTaskConfig.MaxFileSize != "" {
+		if err := maxSizeF.Set(config.AddTaskConfig.MaxFileSize); err != nil {
+			return fmt.Errorf("无效的最大文件大小: %v", err)
+		} else {
+			maxFileSize = maxSizeF.Get() // 获取转为字节的最大值
+		}
+	}
+
+	// 转换最大文件大小
+	var minFileSize int64
+	if config.AddTaskConfig.MinFileSize != "" {
+		if err := minSizeF.Set(config.AddTaskConfig.MinFileSize); err != nil {
+			return fmt.Errorf("无效的最小文件大小: %v", err)
+		} else {
+			minFileSize = minSizeF.Get() // 获取转为字节的最小值
+		}
+	}
+
+	// 转换为任务配置
+	taskConfig := &types.TaskConfig{
+		Name:         config.AddTaskConfig.Name,         // 任务名称
+		BackupDir:    config.AddTaskConfig.BackupDir,    // 备份目录
+		StorageDir:   config.AddTaskConfig.StorageDir,   // 存储目录
+		Compress:     config.AddTaskConfig.Compress,     // 是否压缩
+		RetainCount:  config.AddTaskConfig.RetainCount,  // 保留数量
+		RetainDays:   config.AddTaskConfig.RetainDays,   // 保留天数
+		IncludeRules: config.AddTaskConfig.IncludeRules, // 包含规则
+		ExcludeRules: config.AddTaskConfig.ExcludeRules, // 排除规则
+		MaxFileSize:  maxFileSize,                       // 最大文件大小
+		MinFileSize:  minFileSize,                       // 最小文件大小
+	}
+
 	// 将配置文件中的内容保存到数据库中
-	if err := DB.InsertAddTaskConfig(db, &config.AddTaskConfig); err != nil {
+	if err := DB.InsertAddTaskConfig(db, taskConfig); err != nil {
 		return fmt.Errorf("保存配置文件失败: %v", err)
 	}
 
@@ -110,7 +139,7 @@ func addTaskFromConfigFile(db *sqlx.DB, configPath string, cl *colorlib.ColorLib
 //   - error: 错误信息
 func addTaskFromFlags(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 构建任务配置
-	config := &types.AddTaskConfig{
+	config := &types.TaskConfig{
 		Name:         nameF.Get(),        // 任务名称
 		RetainCount:  retainCountF.Get(), // 保留备份数量
 		RetainDays:   retainDaysF.Get(),  // 保留天数

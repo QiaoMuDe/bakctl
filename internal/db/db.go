@@ -204,7 +204,7 @@ func UpdateTask(db *sqlx.DB, params types.UpdateTaskParams) error {
 //
 // 返回值：
 //   - error：如果插入过程中发生错误, 则返回非 nil 错误信息
-func InsertAddTaskConfig(db *sqlx.DB, cfg *types.AddTaskConfig) error {
+func InsertAddTaskConfig(db *sqlx.DB, cfg *types.TaskConfig) error {
 	// 验证配置
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("配置验证失败: %w", err)
