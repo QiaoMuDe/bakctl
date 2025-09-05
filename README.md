@@ -137,8 +137,8 @@ storage_dir = "/backup/important"
 compress = true
 retain_count = 5
 retain_days = 30
-max_file_size = 104857600  # 100MB
-min_file_size = 1024       # 1KB
+max_file_size = '100MB'  
+min_file_size = '10KB'
 
 [rules]
 include = ["*.pdf", "*.docx", "*.xlsx", "*.txt"]
@@ -208,8 +208,8 @@ BakCtl 采用子命令架构，每个功能模块对应一个子命令：
 | `compress` | bool | ❌ | `false` | 是否启用压缩 |
 | `retain_count` | int | ❌ | `0` | 保留备份数量（0=无限制） |
 | `retain_days` | int | ❌ | `0` | 保留天数（0=无限制） |
-| `max_file_size` | int64 | ❌ | `0` | 最大文件大小（字节，0=无限制） |
-| `min_file_size` | int64 | ❌ | `0` | 最小文件大小（字节） |
+| `max_file_size` | string | ❌ | `0` | 最大文件大小 |
+| `min_file_size` | string | ❌ | `0` | 最小文件大小 |
 
 ### 🎯 过滤规则配置
 
