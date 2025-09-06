@@ -19,8 +19,8 @@ var (
 	deleteCmd *cmd.Cmd // 删除备份任务命令
 
 	// 任务ID选择
-	idF  *qflag.Int64Flag       // 单个任务ID
-	idsF *qflag.StringSliceFlag // 多个任务ID列表
+	idF  *qflag.Int64Flag      // 单个任务ID
+	idsF *qflag.Int64SliceFlag // 多个任务ID列表
 
 	// 删除选项
 	forceF     *qflag.BoolFlag // 强制删除，跳过确认提示
@@ -36,7 +36,7 @@ func InitDeleteCmd() *cmd.Cmd {
 
 	// 任务ID选择 (二选一)
 	idF = deleteCmd.Int64("", "id", 0, "删除指定ID的单个备份任务")
-	idsF = deleteCmd.StringSlice("", "ids", []string{}, "批量删除多个备份任务（逗号分隔）")
+	idsF = deleteCmd.Int64Slice("", "ids", []int64{}, "批量删除多个备份任务 (逗号分隔)")
 
 	// 删除选项
 	forceF = deleteCmd.Bool("force", "f", false, "强制删除，跳过确认提示")

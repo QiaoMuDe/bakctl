@@ -19,8 +19,8 @@ var (
 	editCmd *cmd.Cmd // 编辑备份任务命令
 
 	// 任务ID选择
-	idF  *qflag.IntFlag         // 单个任务ID
-	idsF *qflag.StringSliceFlag // 多个任务ID (切片类型)
+	idF  *qflag.IntFlag        // 单个任务ID
+	idsF *qflag.Int64SliceFlag // 多个任务ID (切片类型)
 
 	// 可编辑的配置项
 	retainCountF *qflag.IntFlag         // 保留备份数量
@@ -43,7 +43,7 @@ func InitEditCmd() *cmd.Cmd {
 
 	// 任务ID选择 (二选一)
 	idF = editCmd.Int("", "id", 0, "指定单个任务ID进行编辑")
-	idsF = editCmd.StringSlice("", "ids", []string{}, "指定多个任务ID进行批量编辑")
+	idsF = editCmd.Int64Slice("", "ids", []int64{}, "指定多个任务ID进行批量编辑")
 
 	// 可编辑的配置项
 	retainCountF = editCmd.Int("retain-count", "r", -1, "保留备份数量 (-1表示不修改)")

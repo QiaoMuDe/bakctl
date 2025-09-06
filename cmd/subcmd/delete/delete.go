@@ -19,7 +19,6 @@ package delete
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
@@ -164,38 +163,14 @@ func deleteTasksMode(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	return nil
 }
 
-// parseTaskID 解析单个任务ID
-//
-// 参数:
-//   - idStr: 任务ID字符串
-//
-// 返回:
-//   - int: 解析后的任务ID
-//   - error: 解析失败时返回错误信息
-func parseTaskID(idStr string) (int64, error) {
-	idStr = strings.TrimSpace(idStr)
-	if idStr == "" {
-		return 0, fmt.Errorf("任务ID不能为空")
-	}
-
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("无效的任务ID格式: %s", idStr)
-	}
-	if id <= 0 {
-		return 0, fmt.Errorf("任务ID必须大于0: %d", id)
-	}
-	return id, nil
-}
-
 // getTaskIDsForTasks 获取要删除的任务ID列表（用于删除任务模式）
 //
 // 返回:
 //   - []int64: 要删除的任务ID列表
 //   - error: 获取失败时返回错误信息
 func getTaskIDsForTasks() ([]int64, error) {
-	id := idF.Get()      // 从命令行参数获取任务ID
-	idsStr := idsF.Get() // 从命令行参数获取任务ID列表
+	id := idF.Get()   // 从命令行参数获取任务ID
+	ids := idsF.Get() // 从命令行参数获取任务ID列表
 
 	// 如果指定了任务ID，则只处理一个任务
 	if id > 0 {
@@ -205,23 +180,17 @@ func getTaskIDsForTasks() ([]int64, error) {
 	// 如果指定了任务ID列表，则处理多个任务
 	var taskIDs []int64
 	seen := make(map[int64]bool) // 用于检查重复ID
-
-	for _, idStr := range idsStr {
-		if strings.TrimSpace(idStr) == "" {
-			continue
-		}
-
-		parsedID, err := parseTaskID(idStr)
-		if err != nil {
-			return nil, err
+	for _, i := range ids {
+		if i <= 0 {
+			return nil, fmt.Errorf("任务ID必须大于0: %d", i)
 		}
 
 		// 检查重复
-		if seen[parsedID] {
-			return nil, fmt.Errorf("任务ID列表中存在重复的ID: %d", parsedID)
+		if seen[i] {
+			return nil, fmt.Errorf("任务ID列表中存在重复的ID: %d", i)
 		}
-		seen[parsedID] = true
-		taskIDs = append(taskIDs, parsedID)
+		seen[i] = true
+		taskIDs = append(taskIDs, i)
 	}
 
 	return taskIDs, nil

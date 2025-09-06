@@ -93,12 +93,7 @@ func getTaskIDs() ([]int64, error) {
 	}
 
 	// 遍历每个ID并解析
-	for _, idStr := range idsSlice {
-		id, err := strconv.ParseInt(idStr, 10, 64) // 获取任务ID
-		if err != nil {
-			return nil, fmt.Errorf("无效的任务ID: %s", idStr)
-		}
-
+	for _, id := range idsSlice {
 		if id <= 0 {
 			return nil, fmt.Errorf("任务ID必须大于0: %d", id)
 		}
@@ -226,22 +221,6 @@ func updateRuleString(currentRuleStr string, newRules []string, ruleType string,
 	return currentRuleStr, nil // 新规则与当前规则相同，返回当前规则
 }
 
-// updateInt 辅助函数，用于更新 int 类型的值
-//
-// 参数:
-//   - currentVal: 当前任务中的原始 int 值
-//   - newVal: 从命令行参数或配置中获取的新 int 值
-//   - unsetVal: 表示新值未设置或无效的特殊 int 值（例如 -1）
-//
-// 返回值:
-//   - int: 更新后的 int 值
-func updateInt(currentVal, newVal, unsetVal int) int {
-	if newVal != unsetVal && newVal != currentVal {
-		return newVal
-	}
-	return currentVal
-}
-
 // updateBooleanFromFlag 辅助函数，用于根据命令行或配置标志更新布尔值
 //
 // 参数:
@@ -278,6 +257,22 @@ func updateBooleanFromFlag(currentValue bool, flagGetter func() string, paramNam
 // 返回值:
 //   - int64: 更新后的 int64 值
 func updateInt64(currentVal, newVal, unsetVal int64) int64 {
+	if newVal != unsetVal && newVal != currentVal {
+		return newVal
+	}
+	return currentVal
+}
+
+// updateInt 辅助函数，用于更新 int 类型的值
+//
+// 参数:
+//   - currentVal: 当前任务中的原始 int 值
+//   - newVal: 从命令行参数或配置中获取的新 int 值
+//   - unsetVal: 表示新值未设置或无效的特殊 int 值（例如 -1）
+//
+// 返回值:
+//   - int: 更新后的 int 值
+func updateInt(currentVal, newVal, unsetVal int) int {
 	if newVal != unsetVal && newVal != currentVal {
 		return newVal
 	}

@@ -22,9 +22,9 @@ var (
 	runCmd *cmd.Cmd // run命令
 
 	// 任务选择参数
-	taskIDFlag   *qflag.Int64Flag       // -id: 指定任务ID
-	taskIDsFlag  *qflag.StringSliceFlag // -ids: 指定多个任务ID
-	allTasksFlag *qflag.BoolFlag        // -all: 运行所有任务
+	taskIDFlag   *qflag.Int64Flag      // -id: 指定任务ID
+	taskIDsFlag  *qflag.Int64SliceFlag // -ids: 指定多个任务ID
+	allTasksFlag *qflag.BoolFlag       // -all: 运行所有任务
 )
 
 // InitRunCmd 初始化run子命令
@@ -35,7 +35,7 @@ func InitRunCmd() *cmd.Cmd {
 
 	// 任务选择参数（互斥）
 	taskIDFlag = runCmd.Int64("", "id", 0, "指定要运行的任务ID")
-	taskIDsFlag = runCmd.StringSlice("", "ids", []string{}, "指定多个任务ID进行批量运行")
+	taskIDsFlag = runCmd.Int64Slice("", "ids", []int64{}, "指定多个任务ID进行批量运行")
 	allTasksFlag = runCmd.Bool("", "all", false, "运行所有任务")
 
 	return runCmd

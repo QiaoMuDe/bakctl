@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"gitee.com/MM-Q/bakctl/internal/cleanup"
@@ -227,28 +226,19 @@ func validateFlags() error {
 	if len(taskIDsFlag.Get()) > 0 {
 		paramCount++
 		// 校验每个ID都是有效的正整数
-		for i, idStr := range taskIDsFlag.Get() {
-			if idStr == "" {
-				return fmt.Errorf("第%d个任务ID不能为空", i+1)
-			}
-
-			id, err := strconv.Atoi(idStr)
-			if err != nil {
-				return fmt.Errorf("第%d个任务ID格式无效: %s (必须为整数)", i+1, idStr)
-			}
-
+		for i, id := range taskIDsFlag.Get() {
 			if id <= 0 {
 				return fmt.Errorf("第%d个任务ID必须为正数: %d", i+1, id)
 			}
 		}
 
 		// 检查是否有重复的ID
-		idSet := make(map[string]bool)
-		for _, idStr := range taskIDsFlag.Get() {
-			if idSet[idStr] {
-				return fmt.Errorf("任务ID重复: %s", idStr)
+		idSet := make(map[int64]bool)
+		for _, id := range taskIDsFlag.Get() {
+			if idSet[id] {
+				return fmt.Errorf("任务ID重复: %d", id)
 			}
-			idSet[idStr] = true
+			idSet[id] = true
 		}
 	}
 
@@ -389,15 +379,9 @@ func selectTasks(db *sqlx.DB) ([]baktypes.BackupTask, error) {
 		return []baktypes.BackupTask{*task}, nil
 	}
 
-	// 将字符串切片转换为整数切片
-	taskIDs, err := utils.StringSliceToInt64(taskIDsFlag.Get())
-	if err != nil {
-		return nil, fmt.Errorf("转换任务ID列表失败: %w", err)
-	}
-
 	// 根据多个任务ID批量查询
 	if len(taskIDsFlag.Get()) > 0 {
-		tasks, err := DB.GetTasksByIDs(db, taskIDs)
+		tasks, err := DB.GetTasksByIDs(db, taskIDsFlag.Get())
 		if err != nil {
 			return nil, fmt.Errorf("批量获取任务失败: %w", err)
 		}

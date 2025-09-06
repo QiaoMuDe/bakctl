@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
@@ -153,26 +152,16 @@ func getTasksToExport(db *sqlx.DB) ([]types.BackupTask, error) {
 	if len(idsF.Get()) > 0 {
 		// 解析 idsF
 		seen := make(map[int64]bool) // 检查重复ID
-		for _, idStr := range idsF.Get() {
-			idStr = strings.TrimSpace(idStr)
-			if idStr == "" {
-				continue
+		for _, i := range idsF.Get() {
+			if i <= 0 {
+				return nil, fmt.Errorf("任务ID必须大于0: %d", i)
+			}
+			if seen[i] {
+				return nil, fmt.Errorf("重复的任务ID: %d", i)
 			}
 
-			// 解析 ID
-			id, err := strconv.ParseInt(idStr, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("无效的任务ID: %s", idStr)
-			}
-			if id <= 0 {
-				return nil, fmt.Errorf("任务ID必须大于0: %d", id)
-			}
-			if seen[id] {
-				return nil, fmt.Errorf("重复的任务ID: %d", id)
-			}
-
-			seen[id] = true
-			taskIDs = append(taskIDs, id)
+			seen[i] = true
+			taskIDs = append(taskIDs, i)
 		}
 	}
 
