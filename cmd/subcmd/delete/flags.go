@@ -25,6 +25,7 @@ var (
 	// 删除选项
 	forceF     *qflag.BoolFlag // 强制删除，跳过确认提示
 	keepFilesF *qflag.BoolFlag // 只删除数据库记录，保留备份文件
+	failedF    *qflag.BoolFlag // 删除所有失败的备份记录
 )
 
 // InitDeleteCmd 初始化删除备份任务命令
@@ -40,6 +41,7 @@ func InitDeleteCmd() *cmd.Cmd {
 	// 删除选项
 	forceF = deleteCmd.Bool("force", "f", false, "强制删除，跳过确认提示")
 	keepFilesF = deleteCmd.Bool("keep-files", "k", false, "只删除数据库记录，保留备份文件")
+	failedF = deleteCmd.Bool("failed", "fd", false, "删除所有失败的备份记录")
 
 	return deleteCmd
 }

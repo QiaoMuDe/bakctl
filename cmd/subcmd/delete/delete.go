@@ -63,8 +63,70 @@ func DeleteCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 		return fmt.Errorf("参数错误: %w", err)
 	}
 
+	// 检查是否是删除失败记录模式
+	if failedF.Get() {
+		return deleteFailedRecords(db, cl)
+	}
+
+	// 原有的删除任务逻辑
+	return deleteTasksMode(db, cl)
+}
+
+// deleteFailedRecords 删除失败的备份记录（保留任务）
+func deleteFailedRecords(db *sqlx.DB, cl *colorlib.ColorLib) error {
+	// 获取所有失败的备份记录
+	failedRecords, err := DB.GetFailedBackupRecords(db)
+	if err != nil {
+		return fmt.Errorf("获取失败备份记录失败: %w", err)
+	}
+
+	if len(failedRecords) == 0 {
+		cl.Yellow("没有找到失败的备份记录")
+		return nil
+	}
+
+	// 显示要删除的失败记录
+	cl.Redf("找到 %d 条失败的备份记录:\n", len(failedRecords))
+	for _, record := range failedRecords {
+		cl.Whitef("  - 任务ID: %d, 版本ID: %s, 失败原因: %s\n",
+			record.TaskID, record.VersionID, record.FailureMessage)
+	}
+
+	// 用户确认
+	if !forceF.Get() {
+		cl.Yellow("\n确认删除这些失败的备份记录吗? (y/N): ")
+		var input string
+		if _, err := fmt.Scanln(&input); err != nil {
+			// 如果读取输入失败，默认取消操作
+			cl.White("操作已取消")
+			return nil
+		}
+		if input != "y" && input != "Y" {
+			cl.White("操作已取消")
+			return nil
+		}
+	}
+
+	// 构建要删除的记录ID列表
+	var recordIDs []int64
+	for _, record := range failedRecords {
+		recordIDs = append(recordIDs, record.ID)
+	}
+
+	// 批量删除失败记录
+	deletedCount, err := DB.DeleteBackupRecordsByIDs(db, recordIDs)
+	if err != nil {
+		return fmt.Errorf("删除失败记录时出错: %w", err)
+	}
+
+	cl.Greenf("成功删除 %d 条失败的备份记录\n", deletedCount)
+	return nil
+}
+
+// deleteTasksMode 删除任务模式（原有逻辑）
+func deleteTasksMode(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 获取要删除的任务ID列表
-	taskIDs, err := getTaskIDs()
+	taskIDs, err := getTaskIDsForTasks()
 	if err != nil {
 		return fmt.Errorf("任务ID解析失败: %w", err)
 	}
@@ -126,12 +188,12 @@ func parseTaskID(idStr string) (int64, error) {
 	return id, nil
 }
 
-// getTaskIDs 获取要删除的任务ID列表
+// getTaskIDsForTasks 获取要删除的任务ID列表（用于删除任务模式）
 //
 // 返回:
-//   - []int: 要删除的任务ID列表
+//   - []int64: 要删除的任务ID列表
 //   - error: 获取失败时返回错误信息
-func getTaskIDs() ([]int64, error) {
+func getTaskIDsForTasks() ([]int64, error) {
 	id := idF.Get()      // 从命令行参数获取任务ID
 	idsStr := idsF.Get() // 从命令行参数获取任务ID列表
 
@@ -418,15 +480,28 @@ func printSummary(summary DeleteSummary, cl *colorlib.ColorLib) {
 func validateFlags() error {
 	id := idF.Get()
 	idsStr := idsF.Get()
+	failed := failedF.Get()
 
-	// 检查是否指定了ID或IDs
-	if id == 0 && len(idsStr) == 0 {
-		return fmt.Errorf("必须指定 -id 或 -ids 参数")
+	// 计算指定的参数数量
+	paramCount := 0
+	if id != 0 {
+		paramCount++
+	}
+	if len(idsStr) > 0 {
+		paramCount++
+	}
+	if failed {
+		paramCount++
 	}
 
-	// 检查ID和IDs是否互斥
-	if id != 0 && len(idsStr) > 0 {
-		return fmt.Errorf("-id 和 -ids 参数不能同时使用")
+	// 检查是否指定了至少一个参数
+	if paramCount == 0 {
+		return fmt.Errorf("必须指定 -id、-ids 或 --failed 参数之一")
+	}
+
+	// 检查参数互斥性
+	if paramCount > 1 {
+		return fmt.Errorf("-id、-ids 和 --failed 参数不能同时使用")
 	}
 
 	// 检查单个ID值是否有效

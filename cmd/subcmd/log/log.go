@@ -173,22 +173,8 @@ func getBackupRecords(db *sqlx.DB) ([]types.BackupRecord, error) {
 	taskID := logCmdTaskID.Get()     // 任务ID
 	taskName := logCmdTaskName.Get() // 任务名称
 	limit := logCmdLimit.Get()       // 限制条数
+	onlyFailed := logCmdFailed.Get() // 只显示失败记录
 
-	// 如果指定了任务ID
-	if taskID > 0 {
-		return DB.GetBackupRecordsByTaskIDWithLimit(db, int64(taskID), limit)
-	}
-
-	// 如果指定了任务名称
-	if taskName != "" {
-		// 先根据任务名称获取任务ID
-		id, err := DB.GetTaskIDByName(db, taskName)
-		if err != nil {
-			return nil, fmt.Errorf("根据任务名称获取任务ID失败: %w", err)
-		}
-		return DB.GetBackupRecordsByTaskIDWithLimit(db, id, limit)
-	}
-
-	// 默认获取所有备份记录
-	return DB.GetAllBackupRecordsWithLimit(db, limit)
+	// 使用新的统一查询方法
+	return DB.GetBackupRecordsWithFilter(db, taskID, taskName, onlyFailed, limit)
 }

@@ -396,3 +396,84 @@ func GetLatestBackupRecordByTask(db *sqlx.DB, taskID int64) (*types.BackupRecord
 
 	return &record, nil
 }
+
+// GetFailedBackupRecords 获取所有失败的备份记录
+//
+// 参数：
+//   - db：数据库连接对象
+//
+// 返回值：
+//   - []types.BackupRecord：失败的备份记录列表
+//   - error：查询过程中的错误
+func GetFailedBackupRecords(db *sqlx.DB) ([]types.BackupRecord, error) {
+	query := `
+		SELECT ID, task_id, task_name, version_id, backup_filename, backup_size, 
+		       storage_path, status, failure_message, checksum, created_at
+		FROM backup_records 
+		WHERE status = 0
+		ORDER BY created_at DESC
+	`
+
+	var records []types.BackupRecord
+	err := db.Select(&records, query)
+	if err != nil {
+		return nil, fmt.Errorf("查询失败备份记录失败: %w", err)
+	}
+
+	return records, nil
+}
+
+// GetBackupRecordsWithFilter 根据过滤条件获取备份记录
+//
+// 参数：
+//   - db：数据库连接对象
+//   - taskID：任务ID，0表示不过滤
+//   - taskName：任务名称，空字符串表示不过滤
+//   - onlyFailed：是否只显示失败记录
+//   - limit：限制返回的记录数量，0表示不限制
+//
+// 返回值：
+//   - []types.BackupRecord：备份记录列表
+//   - error：查询过程中的错误
+func GetBackupRecordsWithFilter(db *sqlx.DB, taskID int, taskName string, onlyFailed bool, limit int) ([]types.BackupRecord, error) {
+	query := `
+		SELECT ID, task_id, task_name, version_id, backup_filename, backup_size, 
+		       storage_path, status, failure_message, checksum, created_at
+		FROM backup_records 
+		WHERE 1=1
+	`
+	args := []interface{}{}
+
+	// 添加任务ID过滤
+	if taskID > 0 {
+		query += " AND task_id = ?"
+		args = append(args, taskID)
+	}
+
+	// 添加任务名称过滤
+	if taskName != "" {
+		query += " AND task_name = ?"
+		args = append(args, taskName)
+	}
+
+	// 添加失败状态过滤
+	if onlyFailed {
+		query += " AND status = 0"
+	}
+
+	query += " ORDER BY created_at DESC"
+
+	// 添加限制条数
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+
+	var records []types.BackupRecord
+	err := db.Select(&records, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("查询备份记录失败: %w", err)
+	}
+
+	return records, nil
+}
