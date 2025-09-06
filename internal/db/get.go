@@ -365,3 +365,34 @@ func GetBackupRecordsByTaskID(db *sqlx.DB, taskID int64) ([]types.BackupRecord, 
 
 	return records, nil
 }
+
+// GetLatestBackupRecordByTask 根据任务ID获取最新的成功备份记录
+//
+// 参数：
+//   - db：数据库连接对象
+//   - taskID：任务ID
+//
+// 返回值：
+//   - *types.BackupRecord：最新的备份记录，如果未找到则返回nil
+//   - error：查询过程中的错误
+func GetLatestBackupRecordByTask(db *sqlx.DB, taskID int64) (*types.BackupRecord, error) {
+	query := `
+		SELECT ID, task_id, task_name, version_id, backup_filename, backup_size, 
+		       storage_path, status, failure_message, checksum, created_at
+		FROM backup_records 
+		WHERE task_id = ? AND status = 1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+
+	var record types.BackupRecord
+	err := db.Get(&record, query, taskID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("未找到任务ID %d 的成功备份记录", taskID)
+		}
+		return nil, fmt.Errorf("查询最新备份记录失败: %w", err)
+	}
+
+	return &record, nil
+}

@@ -24,6 +24,7 @@ var (
 	// 必需参数
 	taskIDFlag    *qflag.IntFlag    // 任务ID
 	versionIDFlag *qflag.StringFlag // 版本ID
+	latestFlag    *qflag.BoolFlag   // 恢复最新备份标志
 
 	// 可选参数
 	targetDirFlag *qflag.StringFlag // 目标目录
@@ -36,8 +37,9 @@ func InitRestoreCmd() *cmd.Cmd {
 	restoreCmd.SetUseChinese(true)
 
 	// 必需参数
-	taskIDFlag = restoreCmd.Int("", "id", 0, "指定要恢复的备份任务ID (必需)")
-	versionIDFlag = restoreCmd.String("", "vid", "", "指定要恢复的备份版本ID (必需)")
+	taskIDFlag = restoreCmd.Int("", "id", 0, "指定要恢复的备份任务ID")
+	versionIDFlag = restoreCmd.String("", "vid", "", "指定要恢复的备份版本ID (与--latest/-l互斥)")
+	latestFlag = restoreCmd.Bool("latest", "l", false, "恢复最新的备份 (与-vid互斥)")
 
 	// 可选参数
 	targetDirFlag = restoreCmd.String("", "d", ".", "指定恢复到的目标目录 (默认为当前目录)")

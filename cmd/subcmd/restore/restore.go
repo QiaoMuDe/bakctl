@@ -32,6 +32,36 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// validateRestoreParams 验证restore命令的参数
+//
+// 返回值：
+//   - taskID: 任务ID
+//   - versionID: 版本ID
+//   - latest: 是否使用最新备份
+//   - targetDir: 目标目录
+//   - error: 验证错误
+func validateRestoreParams() (int, string, bool, string, error) {
+	taskID := taskIDFlag.Get()
+	versionID := versionIDFlag.Get()
+	latest := latestFlag.Get()
+	targetDir := targetDirFlag.Get()
+
+	if taskID <= 0 {
+		return 0, "", false, "", fmt.Errorf("任务ID必须大于0, 请使用 -id 指定")
+	}
+
+	// 检查 -vid 和 --latest 的互斥性
+	if latest && versionID != "" {
+		return 0, "", false, "", fmt.Errorf("不能同时指定 -vid 和 --latest/-l 参数，请选择其中一个")
+	}
+
+	if !latest && versionID == "" {
+		return 0, "", false, "", fmt.Errorf("必须指定 -vid 或 --latest/-l 参数之一")
+	}
+
+	return taskID, versionID, latest, targetDir, nil
+}
+
 // RestoreCmdMain restore命令的主函数
 //
 // 参数：
@@ -44,45 +74,49 @@ func RestoreCmdMain(database *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 获取开始时间
 	startTime := time.Now()
 
-	// 1. 检查 -id 和 -vid 是否为空，必须都不为空
-	taskID := taskIDFlag.Get()
-	versionID := versionIDFlag.Get()
-	targetDir := targetDirFlag.Get()
-	if taskID <= 0 {
-		return fmt.Errorf("任务ID必须大于0, 请使用 -id 指定")
+	// 1. 验证参数
+	taskID, versionID, latest, targetDir, validationErr := validateRestoreParams()
+	if validationErr != nil {
+		return validationErr
 	}
 
-	if versionID == "" {
-		return fmt.Errorf("版本ID不能为空, 请使用 -vid 指定")
+	// 显示基本信息
+	if latest {
+		cl.Bluef("恢复 %d 的最新备份到 %s\n", taskID, targetDir)
+	} else {
+		cl.Bluef("恢复 %d 版本 %s 到 %s\n", taskID, versionID, targetDir)
 	}
-
-	cl.Blue("开始恢复备份...")
-	cl.Bluef("任务ID: %d\n", taskID)
-	cl.Bluef("版本ID: %s\n", versionID)
-	cl.Bluef("目标目录: %s\n", targetDir)
 
 	// 2. 检查指定的任务ID是否存在
-	cl.White("  → 检查任务是否存在...")
 	if !DB.TaskExists(database, int64(taskID)) {
 		return fmt.Errorf("任务ID %d 不存在", taskID)
 	}
 
-	// 3. 检查指定的vid是否存在并且是这个任务ID的
-	cl.White("  → 检查备份记录...")
-	record, err := DB.GetBackupRecordByTaskAndVersion(database, int64(taskID), versionID)
-	if err != nil {
-		return err
+	// 3. 根据参数获取备份记录
+	var record *baktypes.BackupRecord
+	var err error
+
+	if latest {
+		// 获取最新的备份记录
+		record, err = DB.GetLatestBackupRecordByTask(database, int64(taskID))
+		if err != nil {
+			return err
+		}
+	} else {
+		// 获取指定版本的备份记录
+		record, err = DB.GetBackupRecordByTaskAndVersion(database, int64(taskID), versionID)
+		if err != nil {
+			return err
+		}
 	}
 
 	// 4. 检查备份文件是否存在
-	cl.White("  → 验证备份文件...")
 	if _, err := os.Stat(record.StoragePath); os.IsNotExist(err) {
 		return fmt.Errorf("备份文件不存在: %s", record.StoragePath)
 	}
 
 	// 5. 验证备份文件校验值
 	if record.Checksum != "" {
-		cl.White("  → 验证文件完整性...")
 		actualChecksum, err := hash.ChecksumProgress(record.StoragePath, baktypes.HashAlgorithm)
 		if err != nil {
 			return fmt.Errorf("计算备份文件校验值失败: %w", err)
@@ -90,20 +124,15 @@ func RestoreCmdMain(database *sqlx.DB, cl *colorlib.ColorLib) error {
 		if actualChecksum != record.Checksum {
 			return fmt.Errorf("备份文件校验失败，文件可能已损坏或被篡改\n期望: %s\n实际: %s", record.Checksum, actualChecksum)
 		}
-		cl.Green("    文件完整性验证通过  ✔")
-	} else {
-		cl.Yellow("    该备份文件没有校验值记录，无法验证完整性  ✘")
 	}
 
 	// 6. 创建目标目录
-	cl.White("  → 准备目标目录...")
 	absTargetDir, err := filepath.Abs(targetDir)
 	if err != nil {
 		return fmt.Errorf("无法获取目标目录的绝对路径: %w", err)
 	}
 
-	// 7. 根据任务记录里的备份存储地址，解压到-d指定的路径
-	cl.White("  → 正在恢复备份文件...")
+	// 7. 执行恢复
 	if err := extractBackupFile(record.StoragePath, absTargetDir); err != nil {
 		return fmt.Errorf("恢复失败: %w", err)
 	}
@@ -112,8 +141,6 @@ func RestoreCmdMain(database *sqlx.DB, cl *colorlib.ColorLib) error {
 	duration := time.Since(startTime)
 	cl.Green("恢复完成!")
 	cl.Whitef("耗时: %v\n", duration)
-	cl.Whitef("备份文件: %s\n", record.StoragePath)
-	cl.Whitef("目标目录: %s\n", absTargetDir)
 
 	return nil
 }
