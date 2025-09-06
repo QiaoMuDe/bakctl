@@ -35,7 +35,7 @@ func InitLogCmd() *cmd.Cmd {
 	logCmd.SetUseChinese(true)
 
 	// 添加标志
-	logCmdTableStyle = logCmd.Enum("table-style", "ts", "df", "日志表格样式", types.TableStyleList)
+	logCmdTableStyle = logCmd.Enum("table-style", "ts", "ro", "日志表格样式", types.TableStyleList)
 	logCmdTaskID = logCmd.Int("id", "", 0, "指定任务ID来过滤备份记录")
 	logCmdTaskName = logCmd.String("name", "n", "", "指定任务名称来过滤备份记录")
 	logCmdLimit = logCmd.Int("limit", "l", 10, "限制显示的备份记录条数")

@@ -28,7 +28,7 @@ func InitListCmd() *cmd.Cmd {
 	listCmd.SetUseChinese(true)
 
 	// 添加标志
-	listCmdTableStyle = listCmd.Enum("table-style", "ts", "df", "列表表格样式", types.TableStyleList)
+	listCmdTableStyle = listCmd.Enum("table-style", "ts", "ro", "列表表格样式", types.TableStyleList)
 	listCmdSimple = listCmd.Bool("simple", "s", false, "简化显示，只显示核心信息")
 
 	return listCmd
