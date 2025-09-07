@@ -93,7 +93,7 @@ func genIDInternal(tsLen, randLen int) string {
 	r := pool.GetRand()
 	defer pool.PutRand(r)
 
-	return pool.WithString(totalLen, func(buf *strings.Builder) {
+	return pool.WithStrCap(totalLen, func(buf *strings.Builder) {
 		buf.WriteString(ts)
 		// 生成随机数部分
 		generateRandomString(r, randLen, buf)
@@ -168,7 +168,7 @@ func GenWithPrefix(prefix string, n int) string {
 		return id
 	}
 
-	return pool.WithString(len(prefix)+len(id)+1, func(buf *strings.Builder) {
+	return pool.WithStrCap(len(prefix)+len(id)+1, func(buf *strings.Builder) {
 		buf.WriteString(prefix)
 		buf.WriteByte('_')
 		buf.WriteString(id)
@@ -183,7 +183,7 @@ func GenWithPrefix(prefix string, n int) string {
 //   - 36位长度的UUID格式字符串
 func UUID() string {
 	// 从字节池获取32字节的缓冲区用于加密安全随机数据
-	randomBytes := pool.GetByte(32)
+	randomBytes := pool.GetByteCap(32)
 	defer pool.PutByte(randomBytes)
 
 	if _, err := rand.Read(randomBytes); err != nil {
@@ -191,7 +191,7 @@ func UUID() string {
 		r := pool.GetRand()
 		defer pool.PutRand(r)
 
-		return pool.WithString(36, func(buf *strings.Builder) {
+		return pool.WithStrCap(36, func(buf *strings.Builder) {
 			// 8位
 			generateRandomString(r, 8, buf)
 			buf.WriteByte('-')
@@ -214,7 +214,7 @@ func UUID() string {
 	}
 
 	// 使用crypto/rand生成的随机字节映射到字符集
-	return pool.WithString(36, func(buf *strings.Builder) {
+	return pool.WithStrCap(36, func(buf *strings.Builder) {
 		byteIndex := 0
 
 		// 8位
@@ -269,7 +269,7 @@ func GenMaskedID() string {
 	r := pool.GetRand()
 	defer pool.PutRand(r)
 
-	return pool.WithString(20, func(buf *strings.Builder) {
+	return pool.WithStrCap(20, func(buf *strings.Builder) {
 		// 前6位随机字符
 		generateRandomString(r, 6, buf)
 
@@ -299,7 +299,7 @@ func RandomString(length int) string {
 	r := pool.GetRand()
 	defer pool.PutRand(r)
 
-	return pool.WithString(length, func(buf *strings.Builder) {
+	return pool.WithStrCap(length, func(buf *strings.Builder) {
 		generateRandomString(r, length, buf)
 	})
 }

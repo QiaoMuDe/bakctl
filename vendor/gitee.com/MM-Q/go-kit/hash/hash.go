@@ -102,7 +102,7 @@ func checksumCore(filePath, algorithm string, showProgress bool) (string, error)
 	if bufferSize < pool.KB {
 		bufferSize = pool.KB
 	}
-	buf := pool.GetByte(bufferSize)
+	buf := pool.GetByteCap(bufferSize)
 	defer pool.PutByte(buf) // 使用完毕后归还到对象池
 
 	// 默认写入器为哈希函数
@@ -257,7 +257,7 @@ func HashReader(reader io.Reader, algorithm string) (string, error) {
 
 	// 从对象池获取缓冲区进行高效读取
 	const bufferSize = 32 * 1024 // 32KB缓冲区，平衡内存使用和I/O效率
-	buf := pool.GetByte(bufferSize)
+	buf := pool.GetByteCap(bufferSize)
 	defer pool.PutByte(buf)
 
 	// 使用io.CopyBuffer进行高效复制和哈希计算
