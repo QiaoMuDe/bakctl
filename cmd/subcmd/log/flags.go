@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	logCmd           *cmd.Cmd          // log命令
+	logCmd           *qflag.Cmd        // log命令
 	logCmdTableStyle *qflag.EnumFlag   // 日志表格样式
 	logCmdTaskID     *qflag.IntFlag    // 任务ID标志
 	logCmdTaskName   *qflag.StringFlag // 任务名称标志
@@ -29,7 +29,7 @@ var (
 )
 
 // InitLogCmd 初始化日志命令
-func InitLogCmd() *cmd.Cmd {
+func InitLogCmd() *qflag.Cmd {
 	logCmd = cmd.NewCmd("log", "lg", flag.ExitOnError)
 	logCmd.SetDescription("查看备份记录日志")
 	logCmd.SetUseChinese(true)

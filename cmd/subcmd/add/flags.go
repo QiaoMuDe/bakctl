@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	addCmd  *cmd.Cmd          // 添加备份命令
+	addCmd  *qflag.Cmd        // 添加备份命令
 	configF *qflag.StringFlag // 配置文件路径
 	genF    *qflag.BoolFlag   // 生成配置文件
 
@@ -44,7 +44,7 @@ var (
 )
 
 // InitAddCmd 初始化添加备份命令
-func InitAddCmd() *cmd.Cmd {
+func InitAddCmd() *qflag.Cmd {
 	addCmd = cmd.NewCmd("add", "a", flag.ExitOnError)
 	addCmd.SetUseChinese(true)
 	addCmd.SetDescription("添加备份任务")

@@ -21,7 +21,7 @@
 //	bakctl add --name "文档备份" --backup-dir "/home/docs"
 //	bakctl run --task-id 1
 //	bakctl list
-package main
+package bakctl
 
 import (
 	"fmt"
@@ -44,7 +44,7 @@ import (
 	"gitee.com/MM-Q/verman"
 )
 
-func main() {
+func BakctlMain() {
 	// 捕获panic
 	defer func() {
 		if err := recover(); err != nil {

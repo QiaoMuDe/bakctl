@@ -17,12 +17,12 @@ import (
 )
 
 var (
-	listCmd           *cmd.Cmd        // list命令
+	listCmd           *qflag.Cmd      // list命令
 	listCmdTableStyle *qflag.EnumFlag // 日志表格样式
 	listCmdSimple     *qflag.BoolFlag // 简化显示
 )
 
-func InitListCmd() *cmd.Cmd {
+func InitListCmd() *qflag.Cmd {
 	listCmd = cmd.NewCmd("list", "ls", flag.ExitOnError)
 	listCmd.SetDescription("列出所有备份任务")
 	listCmd.SetUseChinese(true)

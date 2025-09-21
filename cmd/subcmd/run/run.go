@@ -26,11 +26,10 @@ import (
 
 	"gitee.com/MM-Q/bakctl/internal/cleanup"
 	DB "gitee.com/MM-Q/bakctl/internal/db"
-	baktypes "gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/bakctl/internal/utils"
 	"gitee.com/MM-Q/colorlib"
 	"gitee.com/MM-Q/comprx"
-	"gitee.com/MM-Q/comprx/types"
 	"gitee.com/MM-Q/go-kit/hash"
 	"gitee.com/MM-Q/go-kit/id"
 	"github.com/jmoiron/sqlx"
@@ -79,9 +78,9 @@ func RunCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 //
 // 返回值：
 //   - error：如果执行过程中发生错误，则返回非 nil 错误信息；成功则返回 nil
-func executeTask(task baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) error {
+func executeTask(task types.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 初始化结果结构体
-	result := &baktypes.BackupResult{
+	result := &types.BackupResult{
 		Success:    false,                    // 备份是否成功
 		BackupPath: generateBackupPath(task), // 备份文件路径
 	}
@@ -108,7 +107,7 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) e
 	}
 
 	// 3. 构建过滤器
-	filters := types.FilterOptions{
+	filters := comprx.FilterOptions{
 		Include: include,          // 包含规则
 		Exclude: exclude,          // 排除规则
 		MinSize: task.MinFileSize, // 最小文件大小
@@ -116,19 +115,19 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) e
 	}
 
 	// 4. 设置压缩等级
-	level := types.CompressionLevelNone // 默认不压缩
+	level := comprx.CompressionLevelNone // 默认不压缩
 	if task.Compress {
-		level = types.CompressionLevelDefault // 使用默认压缩等级
+		level = comprx.CompressionLevelDefault // 使用默认压缩等级
 	}
 
 	// 5. 构建压缩配置
 	opts := comprx.Options{
-		CompressionLevel:      level,                    // 压缩等级
-		OverwriteExisting:     false,                    // 覆盖已存在的文件
-		ProgressEnabled:       true,                     // 显示进度条
-		ProgressStyle:         types.ProgressStyleASCII, // 进度条样式
-		DisablePathValidation: false,                    // 禁用路径验证
-		Filter:                filters,                  // 过滤器
+		CompressionLevel:      level,                     // 压缩等级
+		OverwriteExisting:     false,                     // 覆盖已存在的文件
+		ProgressEnabled:       true,                      // 显示进度条
+		ProgressStyle:         comprx.ProgressStyleASCII, // 进度条样式
+		DisablePathValidation: false,                     // 禁用路径验证
+		Filter:                filters,                   // 过滤器
 	}
 
 	// 6. 执行备份操作
@@ -155,7 +154,7 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) e
 		task.ID, task.Name, task.StorageDir,
 		task.RetainCount, task.RetainDays,
 	)
-	if err := cleanup.CleanupBackupFilesWithLogging(taskAdapter, baktypes.BackupFileExt, cl); err != nil {
+	if err := cleanup.CleanupBackupFilesWithLogging(taskAdapter, types.BackupFileExt, cl); err != nil {
 		return fmt.Errorf("清理历史备份失败: %w", err)
 	}
 
@@ -176,7 +175,7 @@ func executeTask(task baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) e
 //
 // 返回值：
 //   - error：如果执行过程中发生错误，则返回非 nil 错误信息；全部成功则返回 nil
-func executeTasks(tasks []baktypes.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) error {
+func executeTasks(tasks []types.BackupTask, db *sqlx.DB, cl *colorlib.ColorLib) error {
 	successCount := 0 // 成功数量
 	failureCount := 0 // 失败数量
 
@@ -304,10 +303,10 @@ func parseFilterRules(includeRules, excludeRules string) ([]string, []string, er
 //
 // 返回值：
 //   - string：生成的备份文件路径
-func generateBackupPath(task baktypes.BackupTask) string {
+func generateBackupPath(task types.BackupTask) string {
 	// 使用时间字符串格式：YYYYMMDD_HHMMSS
 	timeStr := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("%s_%s%s", task.Name, timeStr, baktypes.BackupFileExt)
+	filename := fmt.Sprintf("%s_%s%s", task.Name, timeStr, types.BackupFileExt)
 	return filepath.Join(task.StorageDir, filename)
 }
 
@@ -328,7 +327,7 @@ func collectBackupInfo(filePath string) (int64, string, error) {
 	}
 
 	// 计算哈希值
-	checksum, err := hash.ChecksumProgress(filePath, baktypes.HashAlgorithm)
+	checksum, err := hash.ChecksumProgress(filePath, types.HashAlgorithm)
 	if err != nil {
 		return info.Size(), "", fmt.Errorf("计算哈希失败: %w", err)
 	}
@@ -345,8 +344,8 @@ func collectBackupInfo(filePath string) (int64, string, error) {
 //
 // 返回值：
 //   - error：如果记录失败，则返回错误信息；成功则返回 nil
-func recordBackupResult(db *sqlx.DB, task baktypes.BackupTask, result *baktypes.BackupResult) error {
-	rec := baktypes.BackupRecord{
+func recordBackupResult(db *sqlx.DB, task types.BackupTask, result *types.BackupResult) error {
+	rec := types.BackupRecord{
 		TaskID:         task.ID,                          // 任务ID
 		TaskName:       task.Name,                        // 任务名称
 		VersionID:      id.GenMaskedID(),                 // 版本ID
@@ -369,14 +368,14 @@ func recordBackupResult(db *sqlx.DB, task baktypes.BackupTask, result *baktypes.
 // 返回值：
 //   - []types.BackupTask：选中的任务列表
 //   - error：如果查询过程中发生错误，则返回非 nil 错误信息
-func selectTasks(db *sqlx.DB) ([]baktypes.BackupTask, error) {
+func selectTasks(db *sqlx.DB) ([]types.BackupTask, error) {
 	// 根据单个任务ID查询
 	if taskIDFlag.Get() > 0 {
 		task, err := DB.GetTaskByID(db, taskIDFlag.Get())
 		if err != nil {
 			return nil, fmt.Errorf("获取任务ID %d 失败: %w", taskIDFlag.Get(), err)
 		}
-		return []baktypes.BackupTask{*task}, nil
+		return []types.BackupTask{*task}, nil
 	}
 
 	// 根据多个任务ID批量查询

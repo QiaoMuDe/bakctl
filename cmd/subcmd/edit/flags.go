@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	editCmd *cmd.Cmd // 编辑备份任务命令
+	editCmd *qflag.Cmd // 编辑备份任务命令
 
 	// 任务ID选择
 	idF  *qflag.IntFlag        // 单个任务ID
@@ -36,7 +36,7 @@ var (
 	clearExcludeF *qflag.BoolFlag // 清空排除规则
 )
 
-func InitEditCmd() *cmd.Cmd {
+func InitEditCmd() *qflag.Cmd {
 	editCmd = cmd.NewCmd("edit", "e", flag.ExitOnError)
 	editCmd.SetUseChinese(true)
 	editCmd.SetDescription("编辑备份任务配置")

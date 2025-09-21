@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	deleteCmd *cmd.Cmd // 删除备份任务命令
+	deleteCmd *qflag.Cmd // 删除备份任务命令
 
 	// 任务ID选择
 	idF  *qflag.Int64Flag      // 单个任务ID
@@ -29,7 +29,7 @@ var (
 )
 
 // InitDeleteCmd 初始化删除备份任务命令
-func InitDeleteCmd() *cmd.Cmd {
+func InitDeleteCmd() *qflag.Cmd {
 	deleteCmd = cmd.NewCmd("delete", "del", flag.ExitOnError)
 	deleteCmd.SetUseChinese(true)
 	deleteCmd.SetDescription("删除备份任务")

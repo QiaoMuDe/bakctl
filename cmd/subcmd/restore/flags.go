@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	restoreCmd *cmd.Cmd // restore命令
+	restoreCmd *qflag.Cmd // restore命令
 
 	// 必需参数
 	taskIDFlag    *qflag.IntFlag    // 任务ID
@@ -31,7 +31,7 @@ var (
 )
 
 // InitRestoreCmd 初始化restore子命令
-func InitRestoreCmd() *cmd.Cmd {
+func InitRestoreCmd() *qflag.Cmd {
 	restoreCmd = cmd.NewCmd("restore", "rs", flag.ExitOnError)
 	restoreCmd.SetDescription("恢复备份文件")
 	restoreCmd.SetUseChinese(true)

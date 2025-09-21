@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	exportCmd *cmd.Cmd // 导出备份任务命令
+	exportCmd *qflag.Cmd // 导出备份任务命令
 
 	// 任务选择标志
 	idF  *qflag.IntFlag        // 单个任务ID
@@ -32,7 +32,7 @@ var (
 	shF  *qflag.BoolFlag // 生成Linux Bash脚本
 )
 
-func InitExportCmd() *cmd.Cmd {
+func InitExportCmd() *qflag.Cmd {
 	exportCmd = cmd.NewCmd("export", "exp", flag.ExitOnError)
 	exportCmd.SetUseChinese(true)
 	exportCmd.SetDescription("导出备份任务数据")

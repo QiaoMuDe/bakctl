@@ -24,10 +24,9 @@ import (
 	"time"
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
-	baktypes "gitee.com/MM-Q/bakctl/internal/types"
+	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/colorlib"
 	"gitee.com/MM-Q/comprx"
-	"gitee.com/MM-Q/comprx/types"
 	"gitee.com/MM-Q/go-kit/hash"
 	"github.com/jmoiron/sqlx"
 )
@@ -93,7 +92,7 @@ func RestoreCmdMain(database *sqlx.DB, cl *colorlib.ColorLib) error {
 	}
 
 	// 3. 根据参数获取备份记录
-	var record *baktypes.BackupRecord
+	var record *types.BackupRecord
 	var err error
 
 	if latest {
@@ -117,7 +116,7 @@ func RestoreCmdMain(database *sqlx.DB, cl *colorlib.ColorLib) error {
 
 	// 5. 验证备份文件校验值
 	if record.Checksum != "" {
-		actualChecksum, err := hash.ChecksumProgress(record.StoragePath, baktypes.HashAlgorithm)
+		actualChecksum, err := hash.ChecksumProgress(record.StoragePath, types.HashAlgorithm)
 		if err != nil {
 			return fmt.Errorf("计算备份文件校验值失败: %w", err)
 		}
@@ -156,11 +155,11 @@ func RestoreCmdMain(database *sqlx.DB, cl *colorlib.ColorLib) error {
 func extractBackupFile(backupPath, targetDir string) error {
 	// 构建压缩配置
 	opts := comprx.Options{
-		CompressionLevel:      types.CompressionLevelDefault, // 压缩等级默认
-		OverwriteExisting:     false,                         // 覆盖已存在的文件
-		ProgressEnabled:       true,                          // 显示进度条
-		ProgressStyle:         types.ProgressStyleASCII,      // 进度条样式
-		DisablePathValidation: false,                         // 禁用路径验证
+		CompressionLevel:      comprx.CompressionLevelDefault, // 压缩等级默认
+		OverwriteExisting:     false,                          // 覆盖已存在的文件
+		ProgressEnabled:       true,                           // 显示进度条
+		ProgressStyle:         comprx.ProgressStyleASCII,      // 进度条样式
+		DisablePathValidation: false,                          // 禁用路径验证
 	}
 
 	// 执行解压操作

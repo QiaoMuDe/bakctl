@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	runCmd *cmd.Cmd // run命令
+	runCmd *qflag.Cmd // run命令
 
 	// 任务选择参数
 	taskIDFlag   *qflag.Int64Flag      // -id: 指定任务ID
@@ -28,7 +28,7 @@ var (
 )
 
 // InitRunCmd 初始化run子命令
-func InitRunCmd() *cmd.Cmd {
+func InitRunCmd() *qflag.Cmd {
 	runCmd = cmd.NewCmd("run", "r", flag.ExitOnError)
 	runCmd.SetDescription("运行备份任务")
 	runCmd.SetUseChinese(true)
