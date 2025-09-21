@@ -7,7 +7,7 @@ output_dir = 'output'
 # --name, -n: 指定输出文件名
 output_name = 'bakctl'
 # --main, -m: 指定入口文件
-main_file = 'cmd/bakctl/main.go'
+main_file = 'main.go'
 # --use-vendor, -uv: 在编译时使用vendor目录
 use_vendor = true
 # --git, -g: 在编译时注入git信息
