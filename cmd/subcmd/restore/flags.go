@@ -33,8 +33,8 @@ var (
 // InitRestoreCmd 初始化restore子命令
 func InitRestoreCmd() *qflag.Cmd {
 	restoreCmd = cmd.NewCmd("restore", "rs", flag.ExitOnError)
-	restoreCmd.SetDescription("恢复备份文件")
-	restoreCmd.SetUseChinese(true)
+	restoreCmd.SetDesc("恢复备份文件")
+	restoreCmd.SetChinese(true)
 
 	// 必需参数
 	taskIDFlag = restoreCmd.Int("", "id", 0, "指定要恢复的备份任务ID")

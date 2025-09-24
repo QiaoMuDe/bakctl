@@ -38,8 +38,8 @@ var (
 
 func InitEditCmd() *qflag.Cmd {
 	editCmd = cmd.NewCmd("edit", "e", flag.ExitOnError)
-	editCmd.SetUseChinese(true)
-	editCmd.SetDescription("编辑备份任务配置")
+	editCmd.SetChinese(true)
+	editCmd.SetDesc("编辑备份任务配置")
 
 	// 任务ID选择 (二选一)
 	idF = editCmd.Int("", "id", 0, "指定单个任务ID进行编辑")

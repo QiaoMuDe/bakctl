@@ -24,8 +24,8 @@ var (
 
 func InitListCmd() *qflag.Cmd {
 	listCmd = cmd.NewCmd("list", "ls", flag.ExitOnError)
-	listCmd.SetDescription("列出所有备份任务")
-	listCmd.SetUseChinese(true)
+	listCmd.SetDesc("列出所有备份任务")
+	listCmd.SetChinese(true)
 
 	// 添加标志
 	listCmdTableStyle = listCmd.Enum("table-style", "ts", "ro", "列表表格样式, 支持的样式有:\n"+

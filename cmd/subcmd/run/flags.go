@@ -30,8 +30,8 @@ var (
 // InitRunCmd 初始化run子命令
 func InitRunCmd() *qflag.Cmd {
 	runCmd = cmd.NewCmd("run", "r", flag.ExitOnError)
-	runCmd.SetDescription("运行备份任务")
-	runCmd.SetUseChinese(true)
+	runCmd.SetDesc("运行备份任务")
+	runCmd.SetChinese(true)
 
 	// 任务选择参数（互斥）
 	taskIDFlag = runCmd.Int64("", "id", 0, "指定要运行的任务ID")

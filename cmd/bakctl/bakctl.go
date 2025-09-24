@@ -26,7 +26,6 @@ package bakctl
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"runtime/debug"
 
 	"gitee.com/MM-Q/bakctl/cmd/subcmd/add"
@@ -184,15 +183,14 @@ var (
 // 初始化主命令
 func initMainCmd() {
 	// 全局主命令的参数设置
-	qflag.SetUseChinese(true)       // 使用中文版帮助信息
-	qflag.SetEnableCompletion(true) // 开启自动补全
+	qflag.SetChinese(true)    // 使用中文版帮助信息
+	qflag.SetCompletion(true) // 开启自动补全
 
 	// 获取版本信息
-	v := verman.Get()
-	qflag.SetVersionf("%s version %s %s/%s", v.AppName, v.GitVersion, runtime.GOOS, runtime.GOARCH)
+	qflag.SetVersion(verman.V.Version())
 
 	// 设置描述
-	qflag.SetDescription("bakctl 是一个跨平台的备份管理工具，支持数据库存储和全面的备份操作")
+	qflag.SetDesc("bakctl 是一个跨平台的备份管理工具，支持数据库存储和全面的备份操作")
 
 	// 添加禁用颜色选项
 	noColorF = qflag.Bool("no-color", "nc", false, "禁用颜色输出")

@@ -31,8 +31,8 @@ var (
 // InitLogCmd 初始化日志命令
 func InitLogCmd() *qflag.Cmd {
 	logCmd = cmd.NewCmd("log", "lg", flag.ExitOnError)
-	logCmd.SetDescription("查看备份记录日志")
-	logCmd.SetUseChinese(true)
+	logCmd.SetDesc("查看备份记录日志")
+	logCmd.SetChinese(true)
 
 	// 添加标志
 	logCmdTableStyle = logCmd.Enum("table-style", "ts", "ro", "日志表格样式, 支持的样式有:\n"+

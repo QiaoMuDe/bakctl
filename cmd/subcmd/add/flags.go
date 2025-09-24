@@ -46,8 +46,8 @@ var (
 // InitAddCmd 初始化添加备份命令
 func InitAddCmd() *qflag.Cmd {
 	addCmd = cmd.NewCmd("add", "a", flag.ExitOnError)
-	addCmd.SetUseChinese(true)
-	addCmd.SetDescription("添加备份任务")
+	addCmd.SetChinese(true)
+	addCmd.SetDesc("添加备份任务")
 
 	// 配置文件相关
 	configF = addCmd.String("config", "C", "", "指定备份任务的文件路径")

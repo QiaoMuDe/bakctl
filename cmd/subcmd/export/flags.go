@@ -34,8 +34,8 @@ var (
 
 func InitExportCmd() *qflag.Cmd {
 	exportCmd = cmd.NewCmd("export", "exp", flag.ExitOnError)
-	exportCmd.SetUseChinese(true)
-	exportCmd.SetDescription("导出备份任务数据")
+	exportCmd.SetChinese(true)
+	exportCmd.SetDesc("导出备份任务数据")
 
 	// 任务选择标志 (三选一)
 	idF = exportCmd.Int("", "id", 0, "指定单个任务ID进行导出")

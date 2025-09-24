@@ -31,8 +31,8 @@ var (
 // InitDeleteCmd 初始化删除备份任务命令
 func InitDeleteCmd() *qflag.Cmd {
 	deleteCmd = cmd.NewCmd("delete", "del", flag.ExitOnError)
-	deleteCmd.SetUseChinese(true)
-	deleteCmd.SetDescription("删除备份任务")
+	deleteCmd.SetChinese(true)
+	deleteCmd.SetDesc("删除备份任务")
 
 	// 任务ID选择 (二选一)
 	idF = deleteCmd.Int64("", "id", 0, "删除指定ID的单个备份任务")
