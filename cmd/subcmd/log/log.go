@@ -97,7 +97,7 @@ func LogCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 			{Name: "任务名", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 			{Name: "版本ID", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 			{Name: "状态", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
-			{Name: "失败信息", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "失败信息", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
 		})
 
 		// 添加简洁模式数据行
@@ -122,7 +122,7 @@ func LogCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 			{Name: "文件大小", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
 			{Name: "存储路径", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 			{Name: "状态", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
-			{Name: "失败信息", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
+			{Name: "失败信息", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
 			{Name: "校验码", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 			{Name: "创建时间", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
 		})
@@ -139,7 +139,7 @@ func LogCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 				record.Status,                             // 状态
 				emptyToPlaceholder(record.FailureMessage), // 失败信息
 				emptyToPlaceholder(record.Checksum),       // 校验码
-				record.CreatedAt,                          // 创建时间
+				utils.ConvertUTCToLocal(record.CreatedAt), // 创建时间（转换为本地时间）
 			})
 		}
 	}

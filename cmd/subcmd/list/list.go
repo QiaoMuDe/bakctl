@@ -98,10 +98,10 @@ func ListCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 			{Name: "备份源目录", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 			{Name: "备份存储目录", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
 			{Name: "是否压缩", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
-			{Name: "包含规则", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-			{Name: "排除规则", Align: text.AlignLeft, WidthMaxEnforcer: text.WrapHard},
-			{Name: "最大文件大小", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
-			{Name: "最小文件大小", Align: text.AlignRight, WidthMaxEnforcer: text.WrapHard},
+			{Name: "包含规则", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
+			{Name: "排除规则", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
+			{Name: "最大文件大小", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
+			{Name: "最小文件大小", Align: text.AlignCenter, WidthMaxEnforcer: text.WrapHard},
 		})
 
 		// 添加完整模式数据行
