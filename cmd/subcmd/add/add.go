@@ -124,7 +124,7 @@ func addTaskFromConfigFile(db *sqlx.DB, configPath string, cl *colorlib.ColorLib
 		return fmt.Errorf("保存配置文件失败: %v", err)
 	}
 
-	cl.Greenf("任务 '%s' 添加成功!", config.AddTaskConfig.Name)
+	cl.Greenf("任务 '%s' 添加成功!\n", config.AddTaskConfig.Name)
 
 	return nil
 }
@@ -168,7 +168,7 @@ func addTaskFromFlags(db *sqlx.DB, cl *colorlib.ColorLib) error {
 		return fmt.Errorf("保存任务失败: %v", err)
 	}
 
-	cl.Greenf("任务 '%s' 添加成功!", config.Name)
+	cl.Greenf("任务 '%s' 添加成功!\n", config.Name)
 	return nil
 }
 
