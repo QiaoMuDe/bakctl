@@ -20,7 +20,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
@@ -82,6 +81,16 @@ func addTaskFromConfigFile(db *sqlx.DB, configPath string, cl *colorlib.ColorLib
 		return err
 	}
 
+	// 检查备份目录是否为空
+	if config.AddTaskConfig.BackupDir == "" {
+		return fmt.Errorf("备份目录不能为空")
+	}
+
+	// 检查备份任务名称是否为空
+	if config.AddTaskConfig.Name == "" {
+		return fmt.Errorf("备份任务名称不能为空")
+	}
+
 	// 检查备份的源目录是否为绝对路径, 不是则获取绝对路径
 	if !path.IsAbs(config.AddTaskConfig.BackupDir) {
 		config.AddTaskConfig.BackupDir, err = filepath.Abs(config.AddTaskConfig.BackupDir)
@@ -90,8 +99,8 @@ func addTaskFromConfigFile(db *sqlx.DB, configPath string, cl *colorlib.ColorLib
 		}
 	}
 
-	// 去掉源目录的最后一个路径分隔符
-	config.AddTaskConfig.BackupDir = strings.TrimSuffix(config.AddTaskConfig.BackupDir, string(os.PathSeparator))
+	// 规范化备份目录路径
+	config.AddTaskConfig.BackupDir = filepath.Clean(config.AddTaskConfig.BackupDir)
 
 	// 检查任务名是否已存在
 	taskID, err := DB.GetTaskIDByName(db, config.AddTaskConfig.Name)
@@ -180,8 +189,8 @@ func addTaskFromFlags(db *sqlx.DB, cl *colorlib.ColorLib) error {
 		}
 	}
 
-	// 去掉源目录的最后一个路径分隔符
-	config.BackupDir = strings.TrimSuffix(config.BackupDir, string(os.PathSeparator))
+	// 规范化备份目录路径
+	config.BackupDir = filepath.Clean(config.BackupDir)
 
 	// 检查任务名是否已存在
 	taskID, err := DB.GetTaskIDByName(db, config.Name)
