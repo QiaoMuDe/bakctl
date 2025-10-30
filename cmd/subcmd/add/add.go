@@ -18,6 +18,9 @@ package add
 import (
 	"fmt"
 	"os"
+	"path"
+	"path/filepath"
+	"strings"
 
 	DB "gitee.com/MM-Q/bakctl/internal/db"
 	"gitee.com/MM-Q/bakctl/internal/types"
@@ -78,6 +81,17 @@ func addTaskFromConfigFile(db *sqlx.DB, configPath string, cl *colorlib.ColorLib
 	if err := toml.Unmarshal(data, &config); err != nil {
 		return err
 	}
+
+	// 检查备份的源目录是否为绝对路径, 不是则获取绝对路径
+	if !path.IsAbs(config.AddTaskConfig.BackupDir) {
+		config.AddTaskConfig.BackupDir, err = filepath.Abs(config.AddTaskConfig.BackupDir)
+		if err != nil {
+			return fmt.Errorf("获取备份目录的绝对路径失败: %v, 请手动配置备份目录为绝对路径", err)
+		}
+	}
+
+	// 去掉源目录的最后一个路径分隔符
+	config.AddTaskConfig.BackupDir = strings.TrimSuffix(config.AddTaskConfig.BackupDir, string(os.PathSeparator))
 
 	// 检查任务名是否已存在
 	taskID, err := DB.GetTaskIDByName(db, config.AddTaskConfig.Name)
@@ -156,6 +170,18 @@ func addTaskFromFlags(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	if err := config.Validate(); err != nil {
 		return fmt.Errorf("参数验证失败: %v", err)
 	}
+
+	// 检查备份的源目录是否为绝对路径, 不是则获取绝对路径
+	if !path.IsAbs(config.BackupDir) {
+		var err error
+		config.BackupDir, err = filepath.Abs(config.BackupDir)
+		if err != nil {
+			return fmt.Errorf("获取备份目录的绝对路径失败: %v, 请手动配置备份目录为绝对路径", err)
+		}
+	}
+
+	// 去掉源目录的最后一个路径分隔符
+	config.BackupDir = strings.TrimSuffix(config.BackupDir, string(os.PathSeparator))
 
 	// 检查任务名是否已存在
 	taskID, err := DB.GetTaskIDByName(db, config.Name)
