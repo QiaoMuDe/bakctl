@@ -83,7 +83,7 @@ func BakctlMain() {
 	restoreCmd := restore.InitRestoreCmd()
 
 	// 注册子命令
-	if err := qflag.AddSubCmd(addCmd, editCmd, listCmd, logCmd, runCmd, deleteCmd, exportCmd, restoreCmd); err != nil {
+	if err := qflag.Root.AddSubCmd(addCmd, editCmd, listCmd, logCmd, runCmd, deleteCmd, exportCmd, restoreCmd); err != nil {
 		CL.PrintError(err)
 		os.Exit(1)
 	}
@@ -106,9 +106,9 @@ func BakctlMain() {
 	CL.SetColor(!noColorF.Get())
 
 	// 获取命令名, 如果没有命令名, 则打印帮助信息
-	cmdName := qflag.Arg(0)
+	cmdName := qflag.Root.Arg(0)
 	if cmdName == "" {
-		qflag.PrintHelp()
+		qflag.Root.PrintHelp()
 		os.Exit(0)
 	}
 
@@ -183,15 +183,15 @@ var (
 // 初始化主命令
 func initMainCmd() {
 	// 全局主命令的参数设置
-	qflag.SetChinese(true)    // 使用中文版帮助信息
-	qflag.SetCompletion(true) // 开启自动补全
+	qflag.Root.SetChinese(true)    // 使用中文版帮助信息
+	qflag.Root.SetCompletion(true) // 开启自动补全
 
 	// 获取版本信息
-	qflag.SetVersion(verman.V.Version())
+	qflag.Root.SetVersion(verman.V.Version())
 
 	// 设置描述
-	qflag.SetDesc("bakctl 是一个跨平台的备份管理工具，支持数据库存储和全面的备份操作")
+	qflag.Root.SetDesc("bakctl 是一个跨平台的备份管理工具，支持数据库存储和全面的备份操作")
 
 	// 添加禁用颜色选项
-	noColorF = qflag.Bool("no-color", "nc", false, "禁用颜色输出")
+	noColorF = qflag.Root.Bool("no-color", "nc", false, "禁用颜色输出")
 }
