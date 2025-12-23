@@ -14,7 +14,6 @@ import (
 	"flag"
 
 	"gitee.com/MM-Q/qflag"
-	"gitee.com/MM-Q/qflag/cmd"
 )
 
 var (
@@ -45,7 +44,7 @@ var (
 
 // InitAddCmd 初始化添加备份命令
 func InitAddCmd() *qflag.Cmd {
-	addCmd = cmd.NewCmd("add", "a", flag.ExitOnError)
+	addCmd = qflag.NewCmd("add", "a", flag.ExitOnError)
 	addCmd.SetChinese(true)
 	addCmd.SetDesc("添加备份任务")
 

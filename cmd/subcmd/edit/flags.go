@@ -12,7 +12,6 @@ import (
 	"flag"
 
 	"gitee.com/MM-Q/qflag"
-	"gitee.com/MM-Q/qflag/cmd"
 )
 
 var (
@@ -37,7 +36,7 @@ var (
 )
 
 func InitEditCmd() *qflag.Cmd {
-	editCmd = cmd.NewCmd("edit", "e", flag.ExitOnError)
+	editCmd = qflag.NewCmd("edit", "e", flag.ExitOnError)
 	editCmd.SetChinese(true)
 	editCmd.SetDesc("编辑备份任务配置")
 

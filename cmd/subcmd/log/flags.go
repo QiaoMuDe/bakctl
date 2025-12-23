@@ -15,7 +15,6 @@ import (
 
 	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/qflag"
-	"gitee.com/MM-Q/qflag/cmd"
 )
 
 var (
@@ -30,7 +29,7 @@ var (
 
 // InitLogCmd 初始化日志命令
 func InitLogCmd() *qflag.Cmd {
-	logCmd = cmd.NewCmd("log", "lg", flag.ExitOnError)
+	logCmd = qflag.NewCmd("log", "lg", flag.ExitOnError)
 	logCmd.SetDesc("查看备份记录日志")
 	logCmd.SetChinese(true)
 

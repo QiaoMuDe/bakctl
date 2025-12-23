@@ -13,7 +13,6 @@ import (
 
 	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/qflag"
-	"gitee.com/MM-Q/qflag/cmd"
 )
 
 var (
@@ -23,7 +22,7 @@ var (
 )
 
 func InitListCmd() *qflag.Cmd {
-	listCmd = cmd.NewCmd("list", "ls", flag.ExitOnError)
+	listCmd = qflag.NewCmd("list", "ls", flag.ExitOnError)
 	listCmd.SetDesc("列出所有备份任务")
 	listCmd.SetChinese(true)
 

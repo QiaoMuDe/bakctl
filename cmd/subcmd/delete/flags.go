@@ -12,7 +12,6 @@ import (
 	"flag"
 
 	"gitee.com/MM-Q/qflag"
-	"gitee.com/MM-Q/qflag/cmd"
 )
 
 var (
@@ -30,7 +29,7 @@ var (
 
 // InitDeleteCmd 初始化删除备份任务命令
 func InitDeleteCmd() *qflag.Cmd {
-	deleteCmd = cmd.NewCmd("delete", "del", flag.ExitOnError)
+	deleteCmd = qflag.NewCmd("delete", "del", flag.ExitOnError)
 	deleteCmd.SetChinese(true)
 	deleteCmd.SetDesc("删除备份任务")
 

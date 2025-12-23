@@ -15,7 +15,6 @@ import (
 	"flag"
 
 	"gitee.com/MM-Q/qflag"
-	"gitee.com/MM-Q/qflag/cmd"
 )
 
 var (
@@ -32,7 +31,7 @@ var (
 
 // InitRestoreCmd 初始化restore子命令
 func InitRestoreCmd() *qflag.Cmd {
-	restoreCmd = cmd.NewCmd("restore", "rs", flag.ExitOnError)
+	restoreCmd = qflag.NewCmd("restore", "rs", flag.ExitOnError)
 	restoreCmd.SetDesc("恢复备份文件")
 	restoreCmd.SetChinese(true)
 

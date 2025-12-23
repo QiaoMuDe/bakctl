@@ -12,7 +12,6 @@ import (
 	"flag"
 
 	"gitee.com/MM-Q/qflag"
-	"gitee.com/MM-Q/qflag/cmd"
 )
 
 var (
@@ -33,7 +32,7 @@ var (
 )
 
 func InitExportCmd() *qflag.Cmd {
-	exportCmd = cmd.NewCmd("export", "exp", flag.ExitOnError)
+	exportCmd = qflag.NewCmd("export", "exp", flag.ExitOnError)
 	exportCmd.SetChinese(true)
 	exportCmd.SetDesc("导出备份任务数据")
 

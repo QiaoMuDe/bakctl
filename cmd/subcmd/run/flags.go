@@ -15,7 +15,6 @@ import (
 	"flag"
 
 	"gitee.com/MM-Q/qflag"
-	"gitee.com/MM-Q/qflag/cmd"
 )
 
 var (
@@ -29,7 +28,7 @@ var (
 
 // InitRunCmd 初始化run子命令
 func InitRunCmd() *qflag.Cmd {
-	runCmd = cmd.NewCmd("run", "r", flag.ExitOnError)
+	runCmd = qflag.NewCmd("run", "r", flag.ExitOnError)
 	runCmd.SetDesc("运行备份任务")
 	runCmd.SetChinese(true)
 
