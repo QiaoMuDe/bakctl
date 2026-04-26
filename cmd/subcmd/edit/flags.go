@@ -41,21 +41,21 @@ func InitEditCmd() *qflag.Cmd {
 	editCmd.SetDesc("编辑备份任务配置")
 
 	// 任务ID选择 (二选一)
-	idF = editCmd.Int("", "id", 0, "指定单个任务ID进行编辑")
-	idsF = editCmd.Int64Slice("", "ids", []int64{}, "指定多个任务ID进行批量编辑")
+	idF = editCmd.Int("", "id", "指定单个任务ID进行编辑", 0)
+	idsF = editCmd.Int64Slice("", "ids", "指定多个任务ID进行批量编辑", []int64{})
 
 	// 可编辑的配置项
-	retainCountF = editCmd.Int("retain-count", "r", -1, "保留备份数量 (-1表示不修改)")
-	retainDaysF = editCmd.Int("retain-days", "t", -1, "保留天数 (-1表示不修改)")
-	compressF = editCmd.String("compress", "c", "", "是否压缩备份 (true/false, 空字符串表示不修改)")
-	includeF = editCmd.StringSlice("include", "i", []string{}, "包含规则, 多个规则用逗号分隔")
-	excludeF = editCmd.StringSlice("exclude", "x", []string{}, "排除规则,	多个规则用逗号分隔")
-	maxSizeF = editCmd.Size("max-size", "mx", -1, "最大文件大小 (字节, -1表示不修改)")
-	minSizeF = editCmd.Size("min-size", "ms", -1, "最小文件大小 (字节, -1表示不修改)")
+	retainCountF = editCmd.Int("retain-count", "r", "保留备份数量 (-1表示不修改)", -1)
+	retainDaysF = editCmd.Int("retain-days", "t", "保留天数 (-1表示不修改)", -1)
+	compressF = editCmd.String("compress", "c", "是否压缩备份 (true/false, 空字符串表示不修改)", "")
+	includeF = editCmd.StringSlice("include", "i", "包含规则, 多个规则用逗号分隔", []string{})
+	excludeF = editCmd.StringSlice("exclude", "x", "排除规则,	多个规则用逗号分隔", []string{})
+	maxSizeF = editCmd.Size("max-size", "mx", "最大文件大小 (字节, -1表示不修改)", -1)
+	minSizeF = editCmd.Size("min-size", "ms", "最小文件大小 (字节, -1表示不修改)", -1)
 
 	// 特殊标志：用于清空规则
-	clearIncludeF = editCmd.Bool("clear-include", "", false, "清空包含规则")
-	clearExcludeF = editCmd.Bool("clear-exclude", "", false, "清空排除规则")
+	clearIncludeF = editCmd.Bool("clear-include", "", "清空包含规则", false)
+	clearExcludeF = editCmd.Bool("clear-exclude", "", "清空排除规则", false)
 
 	return editCmd
 }

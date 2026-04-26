@@ -49,28 +49,28 @@ func InitAddCmd() *qflag.Cmd {
 	addCmd.SetDesc("添加备份任务")
 
 	// 配置文件相关
-	configF = addCmd.String("config", "C", "", "指定备份任务的文件路径")
-	genF = addCmd.Bool("generate-template", "g", false, "生成备份任务模板")
+	configF = addCmd.String("config", "C", "指定备份任务的文件路径", "")
+	genF = addCmd.Bool("generate-template", "g", "生成备份任务模板", false)
 
 	// 基本任务信息
-	nameF = addCmd.String("name", "n", "", "任务名称 (必需)")
-	backupDirF = addCmd.String("backup-dir", "b", "", "备份源目录 (必需)")
-	storageDirF = addCmd.String("storage-dir", "s", "", "存储目录 (必需)")
+	nameF = addCmd.String("name", "n", "任务名称 (必需)", "")
+	backupDirF = addCmd.String("backup-dir", "b", "备份源目录 (必需)", "")
+	storageDirF = addCmd.String("storage-dir", "s", "存储目录 (必需)", "")
 
 	// 保留策略
-	retainCountF = addCmd.Int("retain-count", "r", 3, "保留备份数量")
-	retainDaysF = addCmd.Int("retain-days", "t", 7, "保留天数")
+	retainCountF = addCmd.Int("retain-count", "r", "保留备份数量", 3)
+	retainDaysF = addCmd.Int("retain-days", "t", "保留天数", 7)
 
 	// 压缩选项
-	compressF = addCmd.Bool("compress", "c", false, "是否压缩备份")
+	compressF = addCmd.Bool("compress", "c", "是否压缩备份", false)
 
 	// 文件过滤规则
-	includeF = addCmd.StringSlice("include", "i", []string{}, "包含规则, 多个规则用逗号分隔")
-	excludeF = addCmd.StringSlice("exclude", "e", []string{}, "排除规则, 多个规则用逗号分隔")
+	includeF = addCmd.StringSlice("include", "i", "包含规则, 多个规则用逗号分隔", []string{})
+	excludeF = addCmd.StringSlice("exclude", "e", "排除规则, 多个规则用逗号分隔", []string{})
 
 	// 文件大小限制
-	maxSizeF = addCmd.Size("max-size", "mx", 0, "最大文件大小 (0表示无限制)")
-	minSizeF = addCmd.Size("min-size", "ms", 0, "最小文件大小 (0表示无限制)")
+	maxSizeF = addCmd.Size("max-size", "mx", "最大文件大小 (0表示无限制)", 0)
+	minSizeF = addCmd.Size("min-size", "ms", "最小文件大小 (0表示无限制)", 0)
 
 	return addCmd
 }

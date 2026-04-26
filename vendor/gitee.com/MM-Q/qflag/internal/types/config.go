@@ -1,62 +1,131 @@
-// Package types 配置结构体和选项定义
-// 本文件定义了命令配置相关的结构体和选项，包括命令的各种配置参数、
-// 帮助信息设置、版本信息等配置数据的定义和管理。
 package types
 
-// CmdConfig 命令行配置
-type CmdConfig struct {
-	// 版本信息
-	Version string
-
-	// 自定义描述
-	Desc string
-
-	// 自定义的完整命令行帮助信息
-	Help string
-
-	// 自定义用法格式说明
-	UsageSyntax string
-
-	// 模块帮助信息
-	ModuleHelps string
-
-	// logo文本
-	LogoText string
-
-	// 备注内容切片
-	Notes []string
-
-	// 示例信息切片
-	Examples []ExampleInfo
-
-	// 是否使用中文帮助信息
-	UseChinese bool
-
-	// 禁用内置标志自动退出
-	NoFgExit bool
-
-	// 控制是否启用自动补全功能
-	Completion bool
-}
-
-// ExampleInfo 示例信息结构体
-// 用于存储命令的使用示例，包括描述和示例内容
+// MutexGroup 互斥组定义
 //
-// 字段:
-//   - Desc: 示例描述
-//   - Usage: 示例使用方式
-type ExampleInfo struct {
-	Desc  string // 示例描述
-	Usage string // 示例使用方式
+// MutexGroup 定义了一组互斥的标志, 其中最多只能有一个被设置。
+// 当用户设置了互斥组中的多个标志时, 解析器会返回错误。
+//
+// 字段说明:
+//   - Name: 互斥组名称, 用于错误提示和标识
+//   - Flags: 互斥组中的标志名称列表
+//   - AllowNone: 是否允许一个都不设置
+//
+// 使用场景:
+//   - 输出格式互斥 (如 --json 和 --xml 不能同时使用)
+//   - 操作模式互斥 (如 --create 和 --update 不能同时使用)
+//   - 必选选项 (如必须指定 --file 或 --url 中的一个)
+type MutexGroup struct {
+	Name      string   // 互斥组名称, 用于错误提示和标识
+	Flags     []string // 互斥组中的标志名称列表
+	AllowNone bool     // 是否允许一个都不设置
 }
 
-// NewCmdConfig 创建一个新的CmdConfig实例
+// RequiredGroup 必需组定义
+//
+// RequiredGroup 定义了一组必需的标志, 其中所有标志都必须被设置。
+// 当用户没有设置必需组中的某些标志时, 解析器会返回错误。
+//
+// 字段说明:
+//   - Name: 必需组名称, 用于错误提示和标识
+//   - Flags: 必需组中的标志名称列表
+//   - Conditional: 是否为条件性必需组, 如果为true, 则只有当组中任何一个标志被设置时, 才要求所有标志都被设置
+//
+// 使用场景:
+//   - 数据库连接配置 (host, port, user, pass)
+//   - API 认证配置 (api-key, api-secret)
+//   - 文件上传配置 (file-path, upload-url)
+//   - 条件性配置 (如果使用了任何一个标志, 则必须使用所有标志)
+type RequiredGroup struct {
+	Name        string   // 必需组名称, 用于错误提示和标识
+	Flags       []string // 必需组中的标志名称列表
+	Conditional bool     // 是否为条件性必需组
+}
+
+// CmdConfig 命令配置类型
+type CmdConfig struct {
+	Version           string            // 版本号
+	UseChinese        bool              // 是否使用中文
+	EnvPrefix         string            // 环境变量前缀
+	UsageSyntax       string            // 命令使用语法
+	Example           map[string]string // 示例使用, key为描述, value为示例命令
+	Notes             []string          // 注意事项
+	LogoText          string            // 命令logo文本
+	MutexGroups       []MutexGroup      // 互斥组列表
+	RequiredGroups    []RequiredGroup   // 必需组列表
+	Completion        bool              // 是否启用自动补全标志
+	DynamicCompletion bool              // 是否启用动态补全
+}
+
+// NewCmdConfig 创建新的命令配置
+//
+// 返回值:
+//   - *CmdConfig: 新创建的 CmdConfig 实例, 初始化为零值
 func NewCmdConfig() *CmdConfig {
 	return &CmdConfig{
-		Notes:      []string{},      // 备注内容切片
-		Examples:   []ExampleInfo{}, // 示例信息切片
-		UseChinese: false,           // 是否使用中文帮助信息
-		NoFgExit:   false,           // 禁用内置标志自动退出
-		Completion: false,           // 控制是否启用自动补全功能
+		Version:           "",
+		UseChinese:        false,
+		EnvPrefix:         "",
+		UsageSyntax:       "",
+		Example:           map[string]string{},
+		Notes:             []string{},
+		LogoText:          "",
+		MutexGroups:       []MutexGroup{},
+		RequiredGroups:    []RequiredGroup{},
+		Completion:        false,
+		DynamicCompletion: false,
 	}
+}
+
+// Clone 克隆命令配置
+//
+// 返回值:
+//   - *CmdConfig: 克隆后的新 CmdConfig 实例
+//
+// 功能说明:
+//   - 创建当前配置的深拷贝
+//   - 复制所有字段值
+//   - 复制切片和映射时创建新的底层数组/映射
+//   - 用于避免配置共享导致的副作用
+func (c *CmdConfig) Clone() *CmdConfig {
+	if c == nil {
+		return nil
+	}
+
+	clone := &CmdConfig{
+		Version:           c.Version,
+		UseChinese:        c.UseChinese,
+		EnvPrefix:         c.EnvPrefix,
+		UsageSyntax:       c.UsageSyntax,
+		LogoText:          c.LogoText,
+		Completion:        c.Completion,
+		DynamicCompletion: c.DynamicCompletion,
+	}
+
+	// 深拷贝 Example 映射
+	if len(c.Example) > 0 {
+		clone.Example = make(map[string]string, len(c.Example))
+		for k, v := range c.Example {
+			clone.Example[k] = v
+		}
+	}
+
+	// 深拷贝 Notes 切片
+	if len(c.Notes) > 0 {
+		clone.Notes = make([]string, len(c.Notes))
+		copy(clone.Notes, c.Notes)
+	}
+
+	// 深拷贝 MutexGroups 切片
+	if len(c.MutexGroups) > 0 {
+		clone.MutexGroups = make([]MutexGroup, len(c.MutexGroups))
+		copy(clone.MutexGroups, c.MutexGroups)
+	}
+
+	// 深拷贝 RequiredGroups 切片
+	if len(c.RequiredGroups) > 0 {
+		clone.RequiredGroups = make([]RequiredGroup, len(c.RequiredGroups))
+		copy(clone.RequiredGroups, c.RequiredGroups)
+	}
+
+	return clone
 }

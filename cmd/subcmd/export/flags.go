@@ -37,17 +37,17 @@ func InitExportCmd() *qflag.Cmd {
 	exportCmd.SetDesc("导出备份任务数据")
 
 	// 任务选择标志 (三选一)
-	idF = exportCmd.Int("", "id", 0, "指定单个任务ID进行导出")
-	idsF = exportCmd.Int64Slice("", "ids", []int64{}, "指定多个任务ID进行导出, 用逗号分隔")
-	allF = exportCmd.Bool("", "all", false, "导出所有任务")
+	idF = exportCmd.Int("", "id", "指定单个任务ID进行导出", 0)
+	idsF = exportCmd.Int64Slice("", "ids", "指定多个任务ID进行导出, 用逗号分隔", []int64{})
+	allF = exportCmd.Bool("", "all", "导出所有任务", false)
 
 	// 导出类型标志 (二选一)
-	cmdF = exportCmd.Bool("cmd", "c", false, "导出添加任务命令")
-	scriptF = exportCmd.Bool("script", "s", false, "导出一键备份脚本")
+	cmdF = exportCmd.Bool("cmd", "c", "导出添加任务命令", false)
+	scriptF = exportCmd.Bool("script", "s", "导出一键备份脚本", false)
 
 	// 脚本平台标志 (与--script配合使用，二选一)
-	batF = exportCmd.Bool("", "bat", false, "生成Windows BAT脚本")
-	shF = exportCmd.Bool("", "sh", false, "生成Linux Bash脚本")
+	batF = exportCmd.Bool("", "bat", "生成Windows BAT脚本", false)
+	shF = exportCmd.Bool("", "sh", "生成Linux Bash脚本", false)
 
 	return exportCmd
 }

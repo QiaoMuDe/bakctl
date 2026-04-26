@@ -36,12 +36,12 @@ func InitRestoreCmd() *qflag.Cmd {
 	restoreCmd.SetChinese(true)
 
 	// 必需参数
-	taskIDFlag = restoreCmd.Int("", "id", 0, "指定要恢复的备份任务ID")
-	versionIDFlag = restoreCmd.String("", "vid", "", "指定要恢复的备份版本ID (与--latest/-l互斥)")
-	latestFlag = restoreCmd.Bool("latest", "l", false, "恢复最新的备份 (与-vid互斥)")
+	taskIDFlag = restoreCmd.Int("", "id", "指定要恢复的备份任务ID", 0)
+	versionIDFlag = restoreCmd.String("", "vid", "指定要恢复的备份版本ID (与--latest/-l互斥)", "")
+	latestFlag = restoreCmd.Bool("latest", "l", "恢复最新的备份 (与-vid互斥)", false)
 
 	// 可选参数
-	targetDirFlag = restoreCmd.String("", "d", ".", "指定恢复到的目标目录 (默认为当前目录)")
+	targetDirFlag = restoreCmd.String("", "d", "指定恢复到的目标目录 (默认为当前目录)", ".")
 
 	return restoreCmd
 }

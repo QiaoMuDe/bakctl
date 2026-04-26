@@ -34,7 +34,7 @@ func InitLogCmd() *qflag.Cmd {
 	logCmd.SetChinese(true)
 
 	// 添加标志
-	logCmdTableStyle = logCmd.Enum("table-style", "ts", "ro", "日志表格样式, 支持的样式有:\n"+
+	logCmdTableStyle = logCmd.Enum("table-style", "ts", "日志表格样式, 支持的样式有:\n"+
 		"\t\t\t\t\t[df  ] - 默认样式\n"+
 		"\t\t\t\t\t[bd  ] - 加粗样式\n"+
 		"\t\t\t\t\t[cb  ] - 亮色样式\n"+
@@ -42,12 +42,12 @@ func InitLogCmd() *qflag.Cmd {
 		"\t\t\t\t\t[de  ] - 双边框样式\n"+
 		"\t\t\t\t\t[lt  ] - 方边框样式\n"+
 		"\t\t\t\t\t[ro  ] - 圆边框样式\n"+
-		"\t\t\t\t\t[none] - 无边框样式", types.TableStyleList)
-	logCmdTaskID = logCmd.Int("id", "", 0, "指定任务ID来过滤备份记录")
-	logCmdTaskName = logCmd.String("name", "n", "", "指定任务名称来过滤备份记录")
-	logCmdLimit = logCmd.Int("limit", "l", 10, "限制显示的备份记录条数")
-	logCmdSimple = logCmd.Bool("simple", "s", false, "简化显示，只显示核心信息")
-	logCmdFailed = logCmd.Bool("failed", "fd", false, "只显示失败的备份记录")
+		"\t\t\t\t\t[none] - 无边框样式", "ro", types.TableStyleList)
+	logCmdTaskID = logCmd.Int("id", "", "指定任务ID来过滤备份记录", 0)
+	logCmdTaskName = logCmd.String("name", "n", "指定任务名称来过滤备份记录", "")
+	logCmdLimit = logCmd.Int("limit", "l", "限制显示的备份记录条数", 10)
+	logCmdSimple = logCmd.Bool("simple", "s", "简化显示，只显示核心信息", false)
+	logCmdFailed = logCmd.Bool("failed", "fd", "只显示失败的备份记录", false)
 
 	return logCmd
 }

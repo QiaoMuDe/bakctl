@@ -27,7 +27,7 @@ func InitListCmd() *qflag.Cmd {
 	listCmd.SetChinese(true)
 
 	// 添加标志
-	listCmdTableStyle = listCmd.Enum("table-style", "ts", "ro", "列表表格样式, 支持的样式有:\n"+
+	listCmdTableStyle = listCmd.Enum("table-style", "ts", "列表表格样式, 支持的样式有:\n"+
 		"\t\t\t\t\t[df  ] - 默认样式\n"+
 		"\t\t\t\t\t[bd  ] - 加粗样式\n"+
 		"\t\t\t\t\t[cb  ] - 亮色样式\n"+
@@ -35,8 +35,8 @@ func InitListCmd() *qflag.Cmd {
 		"\t\t\t\t\t[de  ] - 双边框样式\n"+
 		"\t\t\t\t\t[lt  ] - 方边框样式\n"+
 		"\t\t\t\t\t[ro  ] - 圆边框样式\n"+
-		"\t\t\t\t\t[none] - 无边框样式", types.TableStyleList)
-	listCmdSimple = listCmd.Bool("simple", "s", false, "简化显示，只显示核心信息")
+		"\t\t\t\t\t[none] - 无边框样式", "ro", types.TableStyleList)
+	listCmdSimple = listCmd.Bool("simple", "s", "简化显示，只显示核心信息", false)
 
 	return listCmd
 }

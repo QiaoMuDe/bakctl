@@ -33,9 +33,9 @@ func InitRunCmd() *qflag.Cmd {
 	runCmd.SetChinese(true)
 
 	// 任务选择参数（互斥）
-	taskIDFlag = runCmd.Int64("", "id", 0, "指定要运行的任务ID")
-	taskIDsFlag = runCmd.Int64Slice("", "ids", []int64{}, "指定多个任务ID进行批量运行")
-	allTasksFlag = runCmd.Bool("", "all", false, "运行所有任务")
+	taskIDFlag = runCmd.Int64("", "id", "指定要运行的任务ID", 0)
+	taskIDsFlag = runCmd.Int64Slice("", "ids", "指定多个任务ID进行批量运行", []int64{})
+	allTasksFlag = runCmd.Bool("", "all", "运行所有任务", false)
 
 	return runCmd
 }

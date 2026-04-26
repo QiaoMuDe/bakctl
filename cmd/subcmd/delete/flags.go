@@ -34,13 +34,13 @@ func InitDeleteCmd() *qflag.Cmd {
 	deleteCmd.SetDesc("删除备份任务")
 
 	// 任务ID选择 (二选一)
-	idF = deleteCmd.Int64("", "id", 0, "删除指定ID的单个备份任务")
-	idsF = deleteCmd.Int64Slice("", "ids", []int64{}, "批量删除多个备份任务 (逗号分隔)")
+	idF = deleteCmd.Int64("", "id", "删除指定ID的单个备份任务", 0)
+	idsF = deleteCmd.Int64Slice("", "ids", "批量删除多个备份任务 (逗号分隔)", []int64{})
 
 	// 删除选项
-	forceF = deleteCmd.Bool("force", "f", false, "强制删除，跳过确认提示")
-	keepFilesF = deleteCmd.Bool("keep-files", "k", false, "只删除数据库记录，保留备份文件")
-	failedF = deleteCmd.Bool("failed", "fd", false, "删除所有失败的备份记录")
+	forceF = deleteCmd.Bool("force", "f", "强制删除，跳过确认提示", false)
+	keepFilesF = deleteCmd.Bool("keep-files", "k", "只删除数据库记录，保留备份文件", false)
+	failedF = deleteCmd.Bool("failed", "fd", "删除所有失败的备份记录", false)
 
 	return deleteCmd
 }

@@ -83,7 +83,7 @@ func BakctlMain() {
 	restoreCmd := restore.InitRestoreCmd()
 
 	// 注册子命令
-	if err := qflag.Root.AddSubCmd(addCmd, editCmd, listCmd, logCmd, runCmd, deleteCmd, exportCmd, restoreCmd); err != nil {
+	if err := qflag.Root.AddSubCmds(addCmd, editCmd, listCmd, logCmd, runCmd, deleteCmd, exportCmd, restoreCmd); err != nil {
 		CL.PrintError(err)
 		os.Exit(1)
 	}
@@ -193,5 +193,5 @@ func initMainCmd() {
 	qflag.Root.SetDesc("bakctl 是一个跨平台的备份管理工具，支持数据库存储和全面的备份操作")
 
 	// 添加禁用颜色选项
-	noColorF = qflag.Root.Bool("no-color", "nc", false, "禁用颜色输出")
+	noColorF = qflag.Root.Bool("no-color", "nc", "禁用颜色输出", false)
 }
