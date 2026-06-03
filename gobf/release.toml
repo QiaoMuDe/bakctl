@@ -31,7 +31,7 @@ ldflags = "-X 'gitee.com/MM-Q/verman.appName={{AppName}}' -X 'gitee.com/MM-Q/ver
 # ==================== 编译器配置 ====================
 [build.compiler]
 # 启用CGO
-enable_cgo = true
+enable_cgo = false
 # 设置Go代理
 proxy = 'https://goproxy.cn,https://goproxy.io,direct'
 # 跳过构建前检查
@@ -46,11 +46,11 @@ ldflags = '-s -w'
 # 批量编译模式
 batch = true
 # 仅编译当前平台
-current_platform_only = true
+current_platform_only = false
 # 支持的目标平台列表，多个平台用逗号分隔
 platforms = ['linux', 'windows']
 # 支持的目标架构列表，多个架构用逗号分隔
-architectures = ['amd64', 'arm64']
+architectures = ['amd64']
 
 # ==================== 命令配置 ====================
 [build.command]

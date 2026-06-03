@@ -31,7 +31,7 @@ ldflags = "-X 'gitee.com/MM-Q/verman.appName={{AppName}}' -X 'gitee.com/MM-Q/ver
 # ==================== 编译器配置 ====================
 [build.compiler]
 # 启用CGO
-enable_cgo = true
+enable_cgo = false
 # 设置Go代理
 proxy = 'https://goproxy.cn,https://goproxy.io,direct'
 # 跳过构建前检查

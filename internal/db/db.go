@@ -25,7 +25,7 @@ import (
 	"gitee.com/MM-Q/bakctl/internal/types"
 	"gitee.com/MM-Q/bakctl/internal/utils"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // validate 校验核心配置的合法性（确保文件名和目录路径非空）
@@ -90,7 +90,7 @@ func InitSQLite(dbFilename string, dataDirPath string) (*sqlx.DB, error) {
 	}
 
 	// 连接数据库
-	sqlDB, err := sqlx.Connect("sqlite3", dbFullPath)
+	sqlDB, err := sqlx.Connect("sqlite", dbFullPath)
 	if err != nil {
 		return nil, fmt.Errorf("连接数据库失败 (路径：%s) :%w", dbFullPath, err)
 	}
