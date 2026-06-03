@@ -215,10 +215,6 @@ func validateFlags() error {
 	// 检查单个任务ID
 	if taskIDFlag.Get() > 0 {
 		paramCount++
-		// 校验任务ID必须为正数
-		if taskIDFlag.Get() <= 0 {
-			return fmt.Errorf("任务ID必须为正数, 当前值: %d", taskIDFlag.Get())
-		}
 	}
 
 	// 检查多个任务ID
