@@ -80,7 +80,7 @@ func LogCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 提前检查是否有备份记录
 	if len(data) == 0 {
 		cl.Yellow("当前没有备份记录")
-		cl.Whitef("提示: 使用 '%s run' 命令执行备份任务来生成记录", filepath.Base(os.Args[0]))
+		cl.Whitef("提示: 使用 '%s run' 命令执行备份任务来生成记录\n", filepath.Base(os.Args[0]))
 		return nil
 	}
 

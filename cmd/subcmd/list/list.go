@@ -58,7 +58,7 @@ func ListCmdMain(db *sqlx.DB, cl *colorlib.ColorLib) error {
 	// 检查是否有任务
 	if len(data) == 0 {
 		cl.Yellow("当前没有备份任务")
-		cl.Whitef("提示: 使用 '%s add' 命令添加新的备份任务", filepath.Base(os.Args[0]))
+		cl.Whitef("提示: 使用 '%s add' 命令添加新的备份任务\n", filepath.Base(os.Args[0]))
 		return nil
 	}
 
